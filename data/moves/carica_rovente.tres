@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AstralMoveDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/astrals/astral_move_definition.gd" id="1_move"]
+
+[resource]
+script = ExtResource("1_move")
+move_id = &"carica_rovente"
+display_name = "Carica Rovente"
+description = "L'Astral si avvolge nelle fiamme e travolge l'avversario."
+power = 12
+element_id = &"fuoco"

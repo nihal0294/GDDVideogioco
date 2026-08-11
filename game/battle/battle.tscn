@@ -1,0 +1,424 @@
+[gd_scene load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://game/battle/battle_controller.gd" id="1_controller"]
+
+[sub_resource type="Environment" id="Environment_arena"]
+background_mode = 1
+background_color = Color(0.08, 0.14, 0.19, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.58, 0.68, 0.76, 1)
+ambient_light_energy = 0.78
+
+[sub_resource type="StandardMaterial3D" id="Material_ground"]
+albedo_color = Color(0.16, 0.3, 0.22, 1)
+roughness = 0.9
+
+[sub_resource type="PlaneMesh" id="Mesh_ground"]
+material = SubResource("Material_ground")
+size = Vector2(24, 18)
+
+[sub_resource type="CapsuleMesh" id="Mesh_astral"]
+radius = 0.75
+height = 2.4
+
+[sub_resource type="StandardMaterial3D" id="Material_player_platform"]
+albedo_color = Color(0.15, 0.42, 0.62, 1)
+roughness = 0.82
+
+[sub_resource type="CylinderMesh" id="Mesh_player_platform"]
+material = SubResource("Material_player_platform")
+top_radius = 1.8
+bottom_radius = 2.0
+height = 0.28
+
+[sub_resource type="StandardMaterial3D" id="Material_wild_platform"]
+albedo_color = Color(0.58, 0.24, 0.17, 1)
+roughness = 0.82
+
+[sub_resource type="CylinderMesh" id="Mesh_wild_platform"]
+material = SubResource("Material_wild_platform")
+top_radius = 1.8
+bottom_radius = 2.0
+height = 0.28
+
+[sub_resource type="StyleBoxFlat" id="Style_status"]
+bg_color = Color(0.025, 0.045, 0.07, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.36, 0.62, 0.72, 0.88)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="Style_message"]
+bg_color = Color(0.02, 0.032, 0.052, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.74, 0.83, 0.87, 0.9)
+corner_radius_top_left = 9
+corner_radius_top_right = 9
+corner_radius_bottom_right = 9
+corner_radius_bottom_left = 9
+
+[sub_resource type="StyleBoxFlat" id="Style_commands"]
+bg_color = Color(0.035, 0.065, 0.095, 0.96)
+corner_radius_top_left = 9
+corner_radius_top_right = 9
+corner_radius_bottom_right = 9
+corner_radius_bottom_left = 9
+content_margin_left = 14.0
+content_margin_top = 12.0
+content_margin_right = 14.0
+content_margin_bottom = 12.0
+
+[node name="Battle" type="Node"]
+process_mode = 3
+script = ExtResource("1_controller")
+
+[node name="Arena" type="Node3D" parent="."]
+position = Vector3(0, 400, 0)
+
+[node name="BattleLight" type="DirectionalLight3D" parent="Arena"]
+rotation = Vector3(-0.82, -0.55, 0.12)
+light_color = Color(1, 0.91, 0.78, 1)
+light_energy = 1.35
+shadow_enabled = true
+light_cull_mask = 2
+
+[node name="BattleCamera" type="Camera3D" parent="Arena"]
+unique_name_in_owner = true
+position = Vector3(0, 5.8, 10.5)
+rotation = Vector3(-0.43, 0, 0)
+cull_mask = 2
+environment = SubResource("Environment_arena")
+fov = 48.0
+
+[node name="Ground" type="MeshInstance3D" parent="Arena"]
+layers = 2
+mesh = SubResource("Mesh_ground")
+
+[node name="PlayerPlatform" type="MeshInstance3D" parent="Arena"]
+position = Vector3(-3.1, 0.14, 1.1)
+layers = 2
+mesh = SubResource("Mesh_player_platform")
+
+[node name="WildPlatform" type="MeshInstance3D" parent="Arena"]
+position = Vector3(3.1, 0.14, -0.6)
+layers = 2
+mesh = SubResource("Mesh_wild_platform")
+
+[node name="PlayerMonster" type="MeshInstance3D" parent="Arena"]
+unique_name_in_owner = true
+position = Vector3(-3.1, 1.34, 1.1)
+rotation = Vector3(0, -0.35, 0)
+layers = 2
+cast_shadow = 1
+mesh = SubResource("Mesh_astral")
+
+[node name="WildMonster" type="MeshInstance3D" parent="Arena"]
+unique_name_in_owner = true
+position = Vector3(3.1, 1.34, -0.6)
+rotation = Vector3(0, 2.8, 0)
+layers = 2
+cast_shadow = 1
+mesh = SubResource("Mesh_astral")
+
+[node name="BattleUI" type="CanvasLayer" parent="."]
+layer = 90
+
+[node name="BattleScreen" type="Control" parent="BattleUI"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ScreenShade" type="ColorRect" parent="BattleUI/BattleScreen"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.01, 0.025, 0.035, 0.18)
+
+[node name="StatusMargin" type="MarginContainer" parent="BattleUI/BattleScreen"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 28.0
+offset_top = 24.0
+offset_right = -28.0
+offset_bottom = 142.0
+grow_horizontal = 2
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 4
+
+[node name="StatusRow" type="HBoxContainer" parent="BattleUI/BattleScreen/StatusMargin"]
+layout_mode = 2
+
+[node name="PlayerStatus" type="PanelContainer" parent="BattleUI/BattleScreen/StatusMargin/StatusRow"]
+custom_minimum_size = Vector2(350, 108)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_status")
+
+[node name="Margin" type="MarginContainer" parent="BattleUI/BattleScreen/StatusMargin/StatusRow/PlayerStatus"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 10
+
+[node name="VBox" type="VBoxContainer" parent="BattleUI/BattleScreen/StatusMargin/StatusRow/PlayerStatus/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="PlayerName" type="Label" parent="BattleUI/BattleScreen/StatusMargin/StatusRow/PlayerStatus/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 23
+text = "Astral alleato"
+
+[node name="PlayerHealth" type="Label" parent="BattleUI/BattleScreen/StatusMargin/StatusRow/PlayerStatus/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.78, 0.88, 0.92, 1)
+text = "HP 0/0"
+
+[node name="PlayerHealthBar" type="ProgressBar" parent="BattleUI/BattleScreen/StatusMargin/StatusRow/PlayerStatus/Margin/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 18)
+layout_mode = 2
+show_percentage = false
+
+[node name="StatusSpacer" type="Control" parent="BattleUI/BattleScreen/StatusMargin/StatusRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="WildStatus" type="PanelContainer" parent="BattleUI/BattleScreen/StatusMargin/StatusRow"]
+custom_minimum_size = Vector2(350, 108)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_status")
+
+[node name="Margin" type="MarginContainer" parent="BattleUI/BattleScreen/StatusMargin/StatusRow/WildStatus"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 10
+
+[node name="VBox" type="VBoxContainer" parent="BattleUI/BattleScreen/StatusMargin/StatusRow/WildStatus/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="WildName" type="Label" parent="BattleUI/BattleScreen/StatusMargin/StatusRow/WildStatus/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 23
+text = "Astral selvatico"
+horizontal_alignment = 2
+
+[node name="WildHealth" type="Label" parent="BattleUI/BattleScreen/StatusMargin/StatusRow/WildStatus/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.78, 0.88, 0.92, 1)
+text = "HP 0/0"
+horizontal_alignment = 2
+
+[node name="WildHealthBar" type="ProgressBar" parent="BattleUI/BattleScreen/StatusMargin/StatusRow/WildStatus/Margin/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 18)
+layout_mode = 2
+show_percentage = false
+
+[node name="BottomMargin" type="MarginContainer" parent="BattleUI/BattleScreen"]
+layout_mode = 1
+anchors_preset = 12
+anchor_right = 1.0
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 32.0
+offset_top = -382.0
+offset_right = -32.0
+offset_bottom = -26.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="BottomLayout" type="VBoxContainer" parent="BattleUI/BattleScreen/BottomMargin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 2
+
+[node name="MessagePanel" type="PanelContainer" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout"]
+custom_minimum_size = Vector2(0, 66)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_message")
+
+[node name="MessageLabel" type="Label" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/MessagePanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 21
+text = "Preparati allo scontro."
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="CommandPanel" type="PanelContainer" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 74)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_commands")
+
+[node name="Commands" type="HBoxContainer" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/CommandPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="FightButton" type="Button" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/CommandPanel/Commands"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 20
+text = "Lotta"
+
+[node name="ItemsButton" type="Button" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/CommandPanel/Commands"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 20
+text = "Strumenti"
+
+[node name="SwitchButton" type="Button" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/CommandPanel/Commands"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 20
+text = "Scambia"
+
+[node name="CaptureButton" type="Button" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/CommandPanel/Commands"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 20
+text = "Cattura"
+
+[node name="FleeButton" type="Button" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/CommandPanel/Commands"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 20
+text = "Fuggi"
+
+[node name="MovePanel" type="PanelContainer" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 210)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_commands")
+
+[node name="MoveLayout" type="VBoxContainer" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/MovePanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="MovesTitle" type="Label" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/MovePanel/MoveLayout"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 19
+text = "Mosse"
+horizontal_alignment = 1
+
+[node name="MovesGrid" type="GridContainer" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/MovePanel/MoveLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+columns = 2
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 6
+
+[node name="MoveBackButton" type="Button" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/MovePanel/MoveLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Indietro"
+
+[node name="ItemPanel" type="PanelContainer" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 120)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_commands")
+
+[node name="ItemLayout" type="VBoxContainer" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/ItemPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ItemsTitle" type="Label" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/ItemPanel/ItemLayout"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 19
+text = "Inventario - consumabili"
+horizontal_alignment = 1
+
+[node name="ItemsScroll" type="ScrollContainer" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/ItemPanel/ItemLayout"]
+custom_minimum_size = Vector2(0, 84)
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="ItemsList" type="VBoxContainer" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/ItemPanel/ItemLayout/ItemsScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="ItemBackButton" type="Button" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/ItemPanel/ItemLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Indietro"
+
+[node name="AstralPanel" type="PanelContainer" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 200)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_commands")
+
+[node name="AstralLayout" type="VBoxContainer" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/AstralPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="AstralsTitle" type="Label" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/AstralPanel/AstralLayout"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 19
+text = "Squadra Astral"
+horizontal_alignment = 1
+
+[node name="AstralsScroll" type="ScrollContainer" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/AstralPanel/AstralLayout"]
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="AstralsList" type="VBoxContainer" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/AstralPanel/AstralLayout/AstralsScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="AstralBackButton" type="Button" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/AstralPanel/AstralLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Indietro"

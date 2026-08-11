@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AstralMoveDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/astrals/astral_move_definition.gd" id="1_move"]
+
+[resource]
+script = ExtResource("1_move")
+move_id = &"lamafoglia"
+display_name = "Lamafoglia"
+description = "Una foglia affilata attraversa l'aria come una lama."
+power = 10
+element_id = &"natura"

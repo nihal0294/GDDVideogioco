@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AstralMoveDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/astrals/astral_move_definition.gd" id="1_move"]
+
+[resource]
+script = ExtResource("1_move")
+move_id = &"scintilla"
+display_name = "Scintilla"
+description = "Una rapida scintilla incendia l'aria davanti all'Astral."
+power = 8
+element_id = &"fuoco"

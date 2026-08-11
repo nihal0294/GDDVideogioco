@@ -1,10 +1,11 @@
-[gd_scene load_steps=7 format=3 uid="uid://dvm5wnytkfnen"]
+[gd_scene load_steps=8 format=3 uid="uid://dvm5wnytkfnen"]
 
 [ext_resource type="PackedScene" path="res://game/player/player.tscn" id="1_player"]
 [ext_resource type="PackedScene" path="res://game/world/maps/verdant_valley/verdant_valley.tscn" id="2_world_map"]
 [ext_resource type="Script" uid="uid://b6abff5uveb35" path="res://game/main/main.gd" id="3_main"]
 [ext_resource type="PackedScene" path="res://game/inventory/inventory.tscn" id="4_inventory"]
 [ext_resource type="PackedScene" path="res://game/ui/game_ui.tscn" id="5_game_ui"]
+[ext_resource type="PackedScene" path="res://game/astrals/astral_roster.tscn" id="6_astral_roster"]
 
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
@@ -21,6 +22,7 @@ environment = SubResource("Environment_main")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.8191522, 0.4698461, -0.32898983, 0, 0.5735765, 0.819152, 0.5735762, -0.67101014, 0.46984646, 0, 0, 0)
+light_cull_mask = 1
 light_color = Color(1, 0.94, 0.84, 1)
 light_energy = 1.2
 shadow_enabled = true
@@ -33,5 +35,9 @@ directional_shadow_max_distance = 120.0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 0)
 
 [node name="Inventory" parent="." instance=ExtResource("4_inventory")]
+
+[node name="AstralRoster" parent="." instance=ExtResource("6_astral_roster")]
+
+[node name="BattleHost" type="Node" parent="."]
 
 [node name="GameUI" parent="." instance=ExtResource("5_game_ui")]

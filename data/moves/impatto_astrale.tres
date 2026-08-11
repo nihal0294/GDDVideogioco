@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AstralMoveDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/astrals/astral_move_definition.gd" id="1_move"]
+
+[resource]
+script = ExtResource("1_move")
+move_id = &"impatto_astrale"
+display_name = "Impatto Astrale"
+description = "Un urto diretto caricato con energia astrale."
+power = 6
+element_id = &"neutro"

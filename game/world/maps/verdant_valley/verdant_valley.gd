@@ -1,6 +1,10 @@
 class_name VerdantValley
 extends Node3D
 
+@warning_ignore_start("shadowed_variable_base_class")
+
+signal wild_encounter_requested(zone_id: StringName, actor: Node3D)
+
 const VEGETATION_WIND_SCRIPT := preload(
 	"res://game/world/environment/vegetation_wind.gd"
 )
@@ -21,6 +25,12 @@ const ICONIC_LANDMARKS_SCRIPT := preload(
 @export_group("Time of Day")
 @export_range(0.0, 23.99, 0.25) var starting_game_hour: float = 8.0
 @export_range(1.0, 600.0, 1.0) var real_seconds_per_game_hour: float = 60.0
+@export_group("")
+
+@export_group("Wild Encounters")
+@export_range(0.0, 1.0, 0.01) var wild_encounter_probability: float = 0.12
+@export_range(0.25, 10.0, 0.25) var wild_encounter_check_distance: float = 1.5
+@export_range(0.0, 30.0, 0.5) var wild_encounter_cooldown: float = 5.0
 @export_group("")
 
 signal generation_finished
@@ -226,7 +236,15 @@ func get_generated_visual_count() -> int:
 func _setup_iconic_landmarks() -> void:
 	var landmarks := ICONIC_LANDMARKS_SCRIPT.new()
 	landmarks.name = "IconicLandmarks"
+	landmarks.encounter_probability = wild_encounter_probability
+	landmarks.encounter_check_distance = wild_encounter_check_distance
+	landmarks.encounter_cooldown = wild_encounter_cooldown
+	landmarks.wild_encounter_triggered.connect(_on_wild_encounter_triggered)
 	add_child(landmarks)
+
+
+func _on_wild_encounter_triggered(zone_id: StringName, actor: Node3D) -> void:
+	wild_encounter_requested.emit(zone_id, actor)
 
 
 func _setup_vegetation_wind() -> void:

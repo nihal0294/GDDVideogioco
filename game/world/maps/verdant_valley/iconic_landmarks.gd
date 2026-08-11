@@ -1,6 +1,8 @@
 class_name IconicLandmarks
 extends Node3D
 
+signal wild_encounter_triggered(zone_id: StringName, actor: Node3D)
+
 const ENCOUNTER_ZONE_SCRIPT := preload(
 	"res://game/world/encounters/tall_grass_encounter_zone.gd"
 )
@@ -28,6 +30,11 @@ class GrassAsset:
 @export_range(8, 40, 1) var red_tree_count: int = 22
 @export_range(20, 120, 1) var pond_flower_count: int = 64
 @export var random_seed: int = 52041
+@export_group("Wild Encounters")
+@export_range(0.0, 1.0, 0.01) var encounter_probability: float = 0.12
+@export_range(0.25, 10.0, 0.25) var encounter_check_distance: float = 1.5
+@export_range(0.0, 30.0, 0.5) var encounter_cooldown: float = 5.0
+@export_group("")
 
 var _map_root: Node3D
 var _vegetation_root: Node3D
@@ -41,6 +48,8 @@ var _shore_material: StandardMaterial3D
 var _log_material: StandardMaterial3D
 var _grass_material: StandardMaterial3D
 var _flower_materials: Array[StandardMaterial3D] = []
+var _removed_visual_positions: Array[Vector2] = []
+var _removed_collidable_positions: Array[Vector2] = []
 
 
 func _ready() -> void:
@@ -112,6 +121,8 @@ func _clear_landmark_areas() -> void:
 func _clear_multimesh_instances() -> void:
 	if _vegetation_root == null:
 		return
+	_removed_visual_positions.clear()
+	_removed_collidable_positions.clear()
 	for candidate: Node in _vegetation_root.find_children(
 		"*",
 		"MultiMeshInstance3D",
@@ -121,11 +132,16 @@ func _clear_multimesh_instances() -> void:
 		var instance := candidate as MultiMeshInstance3D
 		if instance == null or instance.multimesh == null:
 			continue
+		var represents_solid_prop := _multimesh_represents_solid_prop(instance)
 		for index: int in instance.multimesh.instance_count:
 			var item_transform := instance.multimesh.get_instance_transform(index)
 			var local_position := _map_root.to_local(instance.to_global(item_transform.origin))
 			if not _should_clear(Vector2(local_position.x, local_position.z)):
 				continue
+			var removed_position := Vector2(local_position.x, local_position.z)
+			_removed_visual_positions.append(removed_position)
+			if represents_solid_prop:
+				_removed_collidable_positions.append(removed_position)
 			item_transform.origin.y -= 200.0
 			instance.multimesh.set_instance_transform(index, item_transform)
 
@@ -137,7 +153,10 @@ func _clear_collision_shapes() -> void:
 	for candidate: Node in collision_root.find_children("*", "CollisionShape3D", true, false):
 		var collision := candidate as CollisionShape3D
 		var local_position := _map_root.to_local(collision.global_position)
-		if _should_clear(Vector2(local_position.x, local_position.z)):
+		if _has_position_near(
+			Vector2(local_position.x, local_position.z),
+			_removed_collidable_positions
+		):
 			collision.set_deferred("disabled", true)
 
 
@@ -150,9 +169,34 @@ func _clear_interactables() -> void:
 		if area == null:
 			continue
 		var local_position := _map_root.to_local(area.global_position)
-		if _should_clear(Vector2(local_position.x, local_position.z)):
+		if _has_position_near(
+			Vector2(local_position.x, local_position.z),
+			_removed_visual_positions
+		):
 			area.monitoring = false
 			area.monitorable = false
+
+
+func _multimesh_represents_solid_prop(instance: MultiMeshInstance3D) -> bool:
+	var source_name := instance.name.to_lower()
+	if instance.multimesh.mesh != null:
+		source_name += " " + instance.multimesh.mesh.resource_path.to_lower()
+	for marker: String in ["tree", "pine", "rock", "stone", "stump", "log"]:
+		if source_name.contains(marker):
+			return true
+	return false
+
+
+func _has_position_near(
+	point: Vector2,
+	positions: Array[Vector2],
+	tolerance: float = 1.25
+) -> bool:
+	var tolerance_squared := tolerance * tolerance
+	for removed_position: Vector2 in positions:
+		if point.distance_squared_to(removed_position) <= tolerance_squared:
+			return true
+	return false
 
 
 func _should_clear(point: Vector2) -> bool:
@@ -432,21 +476,81 @@ func _build_tall_grass_fields() -> void:
 			_vegetation_root.add_child(grass_instance)
 		else:
 			add_child(grass_instance)
-		_create_encounter_zone(cluster_index, center, size)
+		_create_encounter_zone(cluster_index, center, size, grass_instance)
 
 
-func _create_encounter_zone(cluster_index: int, center: Vector2, size: Vector2) -> void:
+func _create_encounter_zone(
+	cluster_index: int,
+	center: Vector2,
+	size: Vector2,
+	grass_instance: MultiMeshInstance3D
+) -> void:
 	var area := ENCOUNTER_ZONE_SCRIPT.new()
 	area.name = "TallGrassEncounter_%02d" % cluster_index
 	area.zone_id = StringName("tall_grass_%02d" % cluster_index)
-	var ground_height := _ground_height(center)
-	area.position = Vector3(center.x, ground_height + 1.5, center.y)
+	area.grass_visual = grass_instance
+	area.player = _find_player()
+	area.encounter_probability = encounter_probability
+	area.distance_per_encounter_check = encounter_check_distance
+	area.encounter_cooldown = encounter_cooldown
+	area.encounter_triggered.connect(_on_wild_encounter_triggered)
+	var half_size := size * 0.5
+	var sample_offsets: Array[Vector2] = [
+		Vector2.ZERO,
+		Vector2(-half_size.x, -half_size.y),
+		Vector2(half_size.x, -half_size.y),
+		Vector2(-half_size.x, half_size.y),
+		Vector2(half_size.x, half_size.y),
+		Vector2(-half_size.x, 0.0),
+		Vector2(half_size.x, 0.0),
+		Vector2(0.0, -half_size.y),
+		Vector2(0.0, half_size.y),
+	]
+	var minimum_ground_height := _ground_height(center)
+	var maximum_ground_height := minimum_ground_height
+	for offset: Vector2 in sample_offsets:
+		var sample_height := _ground_height(center + offset)
+		minimum_ground_height = minf(minimum_ground_height, sample_height)
+		maximum_ground_height = maxf(maximum_ground_height, sample_height)
+	var collision_height := maxf(
+		4.0,
+		maximum_ground_height - minimum_ground_height + 4.0
+	)
+	area.position = Vector3(
+		center.x,
+		(minimum_ground_height + maximum_ground_height) * 0.5 + 1.5,
+		center.y
+	)
 	var collision := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
-	shape.size = Vector3(size.x, 4.0, size.y)
+	shape.size = Vector3(size.x, collision_height, size.y)
 	collision.shape = shape
 	area.add_child(collision)
 	add_child(area)
+
+
+func _find_player() -> CharacterBody3D:
+	var scene_root := get_tree().current_scene
+	if scene_root == null:
+		return null
+	var named_player := scene_root.get_node_or_null("Player") as CharacterBody3D
+	if named_player != null:
+		return named_player
+	var grouped_player := get_tree().get_first_node_in_group("player")
+	if grouped_player is CharacterBody3D:
+		return grouped_player as CharacterBody3D
+	for candidate: Node in scene_root.find_children(
+		"*",
+		"CharacterBody3D",
+		true,
+		false
+	):
+		return candidate as CharacterBody3D
+	return null
+
+
+func _on_wild_encounter_triggered(zone_id: StringName, actor: Node3D) -> void:
+	wild_encounter_triggered.emit(zone_id, actor)
 
 
 func _find_tall_grass_asset() -> GrassAsset:
@@ -568,6 +672,10 @@ func _grass_resource_score(resource_path: String) -> int:
 
 
 func _ground_height(point: Vector2) -> float:
+	if _map_root != null and _map_root.has_method("get_terrain_height"):
+		return float(
+			_map_root.call("get_terrain_height", point.x, point.y)
+		)
 	if not is_inside_tree():
 		return 0.0
 	var from := _map_root.to_global(Vector3(point.x, 60.0, point.y))

@@ -108,6 +108,8 @@ func _get_maximum_sway(multimesh_instance: MultiMeshInstance3D) -> float:
 		or source_name.contains("path")
 	):
 		return 0.0
+	if source_name.contains("tallgrass") or source_name.contains("tall_grass"):
+		return 0.0
 	if source_name.contains("bush") or source_name.contains("shrub"):
 		return deg_to_rad(5.0)
 	if (

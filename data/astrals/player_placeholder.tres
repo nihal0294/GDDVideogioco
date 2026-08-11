@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="AstralDefinition" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://game/astrals/astral_definition.gd" id="1_definition"]
+[ext_resource type="Resource" path="res://data/moves/impatto_astrale.tres" id="2_impact"]
+[ext_resource type="Resource" path="res://data/moves/frusta_di_liane.tres" id="3_vines"]
+[ext_resource type="Resource" path="res://data/moves/lamafoglia.tres" id="4_leaf"]
+[ext_resource type="Resource" path="res://data/moves/assalto_radice.tres" id="5_root"]
+
+[resource]
+script = ExtResource("1_definition")
+astral_id = &"player_placeholder"
+display_name = "Astral alleato"
+description = "Un giovane Astral pronto ad affrontare il suo primo combattimento."
+max_health = 30
+attack_power = 8
+speed = 7
+primary_element = &"natura"
+experience_yield = 35
+starting_moves = [ExtResource("2_impact"), ExtResource("3_vines"), ExtResource("4_leaf"), ExtResource("5_root")]
+visual_color = Color(0.25, 0.65, 1, 1)

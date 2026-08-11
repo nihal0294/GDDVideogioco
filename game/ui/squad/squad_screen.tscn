@@ -1,0 +1,368 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://game/ui/squad/squad_screen.gd" id="1_squad"]
+
+[sub_resource type="StyleBoxFlat" id="Style_panel"]
+bg_color = Color(0.055, 0.075, 0.11, 0.97)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.24, 0.42, 0.55, 0.9)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="Style_move"]
+bg_color = Color(0.075, 0.105, 0.15, 0.96)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.29, 0.47, 0.58, 0.75)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_right = 7
+corner_radius_bottom_left = 7
+content_margin_left = 14.0
+content_margin_top = 8.0
+content_margin_right = 14.0
+content_margin_bottom = 8.0
+
+[node name="SquadScreen" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+script = ExtResource("1_squad")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.018, 0.03, 0.05, 0.985)
+
+[node name="OuterMargin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 36
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 36
+theme_override_constants/margin_bottom = 22
+
+[node name="Layout" type="VBoxContainer" parent="OuterMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Header" type="HBoxContainer" parent="OuterMargin/Layout"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="OuterMargin/Layout/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.83, 0.94, 1, 1)
+theme_override_font_sizes/font_size = 36
+text = "Squadra"
+
+[node name="HeaderSpacer" type="Control" parent="OuterMargin/Layout/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="InputHint" type="Label" parent="OuterMargin/Layout/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.58, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 16
+text = "I: chiudi    •    Invio: rendi primo    •    Tab: inventario    •    Esc: menu"
+vertical_alignment = 1
+
+[node name="Content" type="HSplitContainer" parent="OuterMargin/Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+split_offset = 390
+dragger_visibility = 1
+
+[node name="RosterPanel" type="PanelContainer" parent="OuterMargin/Layout/Content"]
+custom_minimum_size = Vector2(350, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_panel")
+
+[node name="RosterMargin" type="MarginContainer" parent="OuterMargin/Layout/Content/RosterPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="RosterLayout" type="VBoxContainer" parent="OuterMargin/Layout/Content/RosterPanel/RosterMargin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="RosterTitle" type="Label" parent="OuterMargin/Layout/Content/RosterPanel/RosterMargin/RosterLayout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.71, 0.85, 0.92, 1)
+theme_override_font_sizes/font_size = 21
+text = "Ordine di combattimento"
+
+[node name="RosterHelp" type="Label" parent="OuterMargin/Layout/Content/RosterPanel/RosterMargin/RosterLayout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.52, 0.61, 0.7, 1)
+text = "Il primo Astral entrerà nel prossimo scontro."
+autowrap_mode = 2
+
+[node name="AstralList" type="ItemList" parent="OuterMargin/Layout/Content/RosterPanel/RosterMargin/RosterLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+focus_mode = 2
+theme_override_font_sizes/font_size = 18
+allow_reselect = true
+fixed_icon_size = Vector2i(38, 38)
+
+[node name="DetailsPanel" type="PanelContainer" parent="OuterMargin/Layout/Content"]
+custom_minimum_size = Vector2(600, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("Style_panel")
+
+[node name="DetailsMargin" type="MarginContainer" parent="OuterMargin/Layout/Content/DetailsPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 14
+
+[node name="Details" type="VBoxContainer" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Identity" type="HBoxContainer" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="AstralColor" type="ColorRect" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(84, 84)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.25, 0.65, 1, 1)
+
+[node name="IdentityText" type="VBoxContainer" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="AstralName" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity/IdentityText"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.96, 1, 1)
+theme_override_font_sizes/font_size = 30
+text = "Astral"
+
+[node name="LeadBadge" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity/IdentityText"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.78, 0.3, 1)
+theme_override_font_sizes/font_size = 17
+text = "★ PRIMO COMBATTENTE"
+
+[node name="PositionLabel" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity/IdentityText"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.61, 0.72, 0.8, 1)
+text = "Posizione in squadra: 1"
+
+[node name="DescriptionLabel" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.79, 0.85, 1)
+theme_override_font_sizes/font_size = 16
+text = "Descrizione dell'Astral."
+autowrap_mode = 2
+
+[node name="SeparatorTop" type="HSeparator" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+layout_mode = 2
+
+[node name="StatsGrid" type="GridContainer" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+layout_mode = 2
+theme_override_constants/h_separation = 22
+theme_override_constants/v_separation = 7
+columns = 4
+
+[node name="LevelLabel" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/StatsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.68, 0.76, 1)
+text = "Livello"
+
+[node name="LevelValue" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/StatsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "1"
+
+[node name="AttackLabel" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/StatsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.68, 0.76, 1)
+text = "Attacco"
+
+[node name="AttackValue" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/StatsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "—"
+
+[node name="HealthLabel" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/StatsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.68, 0.76, 1)
+text = "Salute"
+
+[node name="HealthValue" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/StatsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "0 / 0"
+
+[node name="SpeedLabel" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/StatsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.68, 0.76, 1)
+text = "Velocità"
+
+[node name="SpeedValue" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/StatsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "—"
+
+[node name="HealthBar" type="ProgressBar" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 17)
+layout_mode = 2
+show_percentage = false
+
+[node name="ElementsRow" type="HBoxContainer" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+layout_mode = 2
+
+[node name="ElementsLabel" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/ElementsRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.68, 0.76, 1)
+text = "Elementi:"
+
+[node name="ElementsValue" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/ElementsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 17
+text = "—"
+horizontal_alignment = 2
+
+[node name="ExperienceValue" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.67, 0.78, 0.87, 1)
+text = "EXP —    •    Prossimo livello: —"
+
+[node name="ExperienceBar" type="ProgressBar" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 14)
+layout_mode = 2
+show_percentage = false
+
+[node name="MovesTitle" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.71, 0.85, 0.92, 1)
+theme_override_font_sizes/font_size = 20
+text = "Mosse"
+
+[node name="MovesGrid" type="GridContainer" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 8
+columns = 2
+
+[node name="MoveOne" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/MovesGrid"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 34)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("Style_move")
+text = "1. — Slot libero"
+vertical_alignment = 1
+
+[node name="MoveTwo" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/MovesGrid"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 34)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("Style_move")
+text = "2. — Slot libero"
+vertical_alignment = 1
+
+[node name="MoveThree" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/MovesGrid"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 34)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("Style_move")
+text = "3. — Slot libero"
+vertical_alignment = 1
+
+[node name="MoveFour" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/MovesGrid"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 34)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("Style_move")
+text = "4. — Slot libero"
+vertical_alignment = 1
+
+[node name="Footer" type="HBoxContainer" parent="OuterMargin/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="MoveUpButton" type="Button" parent="OuterMargin/Layout/Footer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(145, 44)
+layout_mode = 2
+disabled = true
+text = "Sposta su"
+
+[node name="MoveDownButton" type="Button" parent="OuterMargin/Layout/Footer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(145, 44)
+layout_mode = 2
+disabled = true
+text = "Sposta giù"
+
+[node name="SetLeadButton" type="Button" parent="OuterMargin/Layout/Footer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 44)
+layout_mode = 2
+disabled = true
+text = "Rendi primo"
+
+[node name="FooterSpacer" type="Control" parent="OuterMargin/Layout/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CloseButton" type="Button" parent="OuterMargin/Layout/Footer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(130, 44)
+layout_mode = 2
+text = "Chiudi"

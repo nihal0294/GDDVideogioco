@@ -7,6 +7,9 @@ const VEGETATION_WIND_SCRIPT := preload(
 const DAY_NIGHT_CYCLE_SCRIPT := preload(
 	"res://game/world/environment/day_night_cycle.gd"
 )
+const ICONIC_LANDMARKS_SCRIPT := preload(
+	"res://game/world/maps/verdant_valley/iconic_landmarks.gd"
+)
 
 @export_group("Wind")
 @export_range(0.0, 2.0, 0.05) var wind_strength: float = 1.0
@@ -145,6 +148,7 @@ func _ready() -> void:
 	_configure_generation()
 	_generate_terrain()
 	_scatter_nature()
+	_setup_iconic_landmarks()
 	_setup_vegetation_wind()
 	_setup_day_night_cycle()
 	_build_multimeshes()
@@ -219,6 +223,12 @@ func get_generated_visual_count() -> int:
 	return count
 
 
+func _setup_iconic_landmarks() -> void:
+	var landmarks := ICONIC_LANDMARKS_SCRIPT.new()
+	landmarks.name = "IconicLandmarks"
+	add_child(landmarks)
+
+
 func _setup_vegetation_wind() -> void:
 	var vegetation_root := get_node_or_null("Vegetation") as Node3D
 	if vegetation_root == null:
@@ -246,11 +256,17 @@ func _setup_day_night_cycle() -> void:
 	var environment_nodes := scene_root.find_children("*", "WorldEnvironment", true, false)
 	if not environment_nodes.is_empty():
 		world_environment = environment_nodes.front() as WorldEnvironment
+	var player := scene_root.get_node_or_null("Player") as Node3D
+	if player == null:
+		var player_nodes := scene_root.find_children("*", "CharacterBody3D", true, false)
+		if not player_nodes.is_empty():
+			player = player_nodes.front() as Node3D
 
 	var day_night_cycle := DAY_NIGHT_CYCLE_SCRIPT.new()
 	day_night_cycle.name = "TimeOfDay"
 	day_night_cycle.sun = sun
 	day_night_cycle.world_environment = world_environment
+	day_night_cycle.player = player
 	day_night_cycle.starting_hour = starting_game_hour
 	day_night_cycle.real_seconds_per_game_hour = real_seconds_per_game_hour
 	add_child(day_night_cycle)

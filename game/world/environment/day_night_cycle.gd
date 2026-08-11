@@ -14,9 +14,14 @@ signal new_day(day: int)
 @export var night_ambient_color := Color("11182b")
 @export var day_ambient_color := Color("b9d8f2")
 @export var twilight_ambient_color := Color("9b5d55")
+@export_range(0.0, 2.0, 0.05) var night_ambient_energy: float = 0.3
+@export_range(0.0, 4.0, 0.05) var lantern_energy: float = 1.6
+@export_range(1.0, 30.0, 0.5) var lantern_range: float = 10.0
+@export var lantern_color := Color("ffd08a")
 
 var sun: DirectionalLight3D
 var world_environment: WorldEnvironment
+var player: Node3D
 var game_hour: float = 8.0
 var elapsed_days: int = 0
 
@@ -25,6 +30,7 @@ var _clock_update_accumulator: float = 0.0
 var _last_displayed_minute: int = -1
 var _sun_azimuth: float = 0.0
 var _environment: Environment
+var _lantern: OmniLight3D
 
 
 func _ready() -> void:
@@ -33,6 +39,7 @@ func _ready() -> void:
 	if sun != null:
 		_sun_azimuth = sun.rotation.y
 	_prepare_environment()
+	_create_player_lantern()
 	_create_clock_ui()
 	_update_clock(true)
 	_update_lighting()
@@ -59,7 +66,7 @@ func _process(delta: float) -> void:
 func get_game_time() -> Dictionary[String, int]:
 	var total_minutes := int(floor(game_hour * 60.0)) % (24 * 60)
 	return {
-		"hour": int(total_minutes / 60),
+		"hour": int(floor(float(total_minutes) / 60.0)),
 		"minute": total_minutes % 60,
 		"day": elapsed_days,
 	}
@@ -111,6 +118,20 @@ func _create_clock_ui() -> void:
 	panel.add_child(_clock_label)
 
 
+func _create_player_lantern() -> void:
+	if player == null:
+		return
+	_lantern = OmniLight3D.new()
+	_lantern.name = "NightLantern"
+	_lantern.position = Vector3(0.0, 1.8, 0.25)
+	_lantern.light_color = lantern_color
+	_lantern.light_energy = 0.0
+	_lantern.omni_range = lantern_range
+	_lantern.omni_attenuation = 1.2
+	_lantern.shadow_enabled = false
+	player.add_child(_lantern)
+
+
 func _update_clock(force_update: bool) -> void:
 	var time := get_game_time()
 	var hour: int = time["hour"]
@@ -141,10 +162,23 @@ func _update_lighting() -> void:
 		sun.shadow_enabled = daylight_factor > 0.02
 
 	if _environment == null:
+		_update_lantern(daylight_factor)
 		return
 	var ambient_color := night_ambient_color.lerp(day_ambient_color, daylight_factor)
 	var twilight_weight := clampf(1.0 - absf(daylight_factor - 0.3) / 0.3, 0.0, 1.0)
 	ambient_color = ambient_color.lerp(twilight_ambient_color, twilight_weight * 0.3)
 	_environment.ambient_light_color = ambient_color
-	_environment.ambient_light_energy = lerpf(0.16, 0.72, daylight_factor)
-	_environment.background_energy_multiplier = lerpf(0.08, 1.0, daylight_factor)
+	_environment.ambient_light_energy = lerpf(
+		night_ambient_energy,
+		0.72,
+		daylight_factor
+	)
+	_environment.background_energy_multiplier = lerpf(0.18, 1.0, daylight_factor)
+	_update_lantern(daylight_factor)
+
+
+func _update_lantern(daylight_factor: float) -> void:
+	if _lantern == null:
+		return
+	var night_factor := 1.0 - smoothstep(0.05, 0.45, daylight_factor)
+	_lantern.light_energy = lantern_energy * night_factor

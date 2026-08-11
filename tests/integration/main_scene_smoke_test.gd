@@ -246,7 +246,9 @@ func _boundary_vegetation_is_configured(
 		var collision := child as CollisionShape3D
 		if collision == null:
 			return false
-		if not collision.shape is BoxShape3D and not collision.shape is CylinderShape3D:
+		var is_box_shape := collision.shape is BoxShape3D
+		var is_cylinder_shape := collision.shape is CylinderShape3D
+		if not is_box_shape and not is_cylinder_shape:
 			return false
 	return true
 
@@ -413,15 +415,15 @@ func _camera_is_behind_and_elevated(camera_rig: SpringArm3D) -> bool:
 	if camera_rig == null:
 		return false
 	var camera := camera_rig.get_node_or_null("Camera3D") as Camera3D
-	return (
-		camera != null
-		and camera.current
-		and camera_rig.rotation.x <= deg_to_rad(-40.0)
-		and camera_rig.rotation.x >= deg_to_rad(-50.0)
-		and camera_rig.spring_length >= 8.0
-		and camera_rig.spring_length <= 10.0
-		and camera.fov <= 52.0
-	)
+	if camera == null or not camera.current:
+		return false
+	if camera_rig.rotation.x > deg_to_rad(-40.0):
+		return false
+	if camera_rig.rotation.x < deg_to_rad(-50.0):
+		return false
+	if camera_rig.spring_length < 8.0 or camera_rig.spring_length > 10.0:
+		return false
+	return camera.fov <= 52.0
 
 
 func _legacy_camera_is_behind_and_elevated(camera_rig: SpringArm3D) -> bool:

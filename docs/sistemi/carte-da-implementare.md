@@ -1,0 +1,3 @@
+# Carte (da implementare)
+
+Gioco ancora da decidere. Le carte sono equivalenti a tutti i Pokémon del gioco. Ogni carta ha una rarità casuale e si divide in: Base, Foil, Bianco/nero, Full art e speciale. Le carte si guadagnano vincendole nei duelli tramite il minigioco, trovandole in giro randomicamente e come ricompensa in alcune missioni secondarie e con un negozio nella capitale a prezzi altissimi. Raccogliere tutte le carte da un achievment ma solo quando si completa l album la prima volta, non serve una carta doppia di diversa rarità, basta una per tutte. Completare una collezione per rarità sblocca delle skin speciali che vengono assegnate da un npc. O una serie di skin o una con effetti VFX fighi.

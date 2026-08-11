@@ -1,0 +1,3 @@
+# Affinità
+
+Affinità: Ogni Astral ha un determinato livello di affinità. Questo livello aumenta o diminuisce in base all' affettività della specie verso il PG. L’affinità può aumentare in vari modi: usandolo spesso in battaglia, dandogli dei dolcetti, facendo minigiochi (da vedere). L affinità aumenta la probabilità di produrre uova, fare evolvere determinate specie e aumentare le possibilità di cattura dei selvatici. Una specie con affinità negativa potrebbe non obbedire agli ordini in battaglia, rifiutarsi di evolversi in determinate condizioni, peggiorare le possibilità di cattura dei selvatici. (Da modificare in futuro)

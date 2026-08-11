@@ -1,0 +1,3 @@
+# Arena (da implementare)
+
+L' arena si trova nella capitale. Per accenderci bisognerà essere arrivati perlomeno al rango diamante. Si potrà accedervi una volta aver completato la missione principale “x”. Le sfide saranno non consecutive, quindi ci si potrà curare tra una e l'altra, ma non si avrà accesso al boxe. Per la modalità hardcore, ci si potrà curare solo durante il fight. Le quattro arene che si affronteranno avranno però un Superquattro casuale tra i tipi che non abbiamo trattato durante la creazione dei biomi, ovverosia: Luce, Ombra, Insetto, Sintetico, Lotta, Fatato, Veleno ed Etereo.

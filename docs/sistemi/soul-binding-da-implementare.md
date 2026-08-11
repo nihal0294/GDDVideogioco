@@ -1,0 +1,3 @@
+# Soul binding (da implementare)
+
+Tu hai delle rune che si attivano in base ai danni inflitti a un Astral, gli status alterati, che aumentano le probabilità di cattura della specie. Probabilmente ci sarà una runa sul guanto oppure sul braccio che verrà inglobata o consumata quando si farà l azione di catturare, che produrrà una runa sotto la specie bersaglio cominciando ad assorbirla. Rune migliori produrranno o animazioni diverse per inglobare la specie oppure stessa animazione ma migliorata con colori, grandezza ecc. Esiste una sola master runa che ti viene consegnata tra la sesta e la settima palestra (circolo).

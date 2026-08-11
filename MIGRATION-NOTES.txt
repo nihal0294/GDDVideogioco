@@ -1,0 +1,11 @@
+GDD Notion -> GitHub
+====================
+
+Contenuto pronto da copiare nella repository.
+- docs/README.md e la pagina principale del GDD.
+- Gli ID interni di Notion sono stati rimossi dai nomi.
+- Cartelle e file sono stati normalizzati in kebab-case per URL GitHub puliti.
+- I link relativi tra pagine e immagini sono stati riscritti.
+- Il contenuto testuale originale non e stato riscritto.
+
+Puoi copiare la cartella docs/ nella root della repository.

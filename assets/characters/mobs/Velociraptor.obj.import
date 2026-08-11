@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://b3t0k8l4rdfqx"
+path="res://.godot/imported/Velociraptor.obj-eb7ea8d0fdef224f8236fac8b8fc6540.mesh"
+
+[deps]
+
+files=["res://.godot/imported/Velociraptor.obj-eb7ea8d0fdef224f8236fac8b8fc6540.mesh"]
+
+source_file="res://assets/characters/mobs/Velociraptor.obj"
+dest_files=["res://.godot/imported/Velociraptor.obj-eb7ea8d0fdef224f8236fac8b8fc6540.mesh", "res://.godot/imported/Velociraptor.obj-eb7ea8d0fdef224f8236fac8b8fc6540.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

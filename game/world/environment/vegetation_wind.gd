@@ -3,9 +3,9 @@ extends Node
 
 @export var target_root: Node3D
 @export_range(5.0, 60.0, 1.0) var update_rate_hz: float = 20.0
-@export_range(0.0, 2.0, 0.05) var base_strength: float = 0.75
-@export_range(0.0, 2.0, 0.05) var minimum_gust: float = 0.25
-@export_range(0.0, 2.0, 0.05) var maximum_gust: float = 1.0
+@export_range(0.0, 2.0, 0.05) var base_strength: float = 1.0
+@export_range(0.0, 2.0, 0.05) var minimum_gust: float = 0.4
+@export_range(0.0, 2.0, 0.05) var maximum_gust: float = 1.35
 @export_range(0.5, 15.0, 0.5) var minimum_gust_duration: float = 2.0
 @export_range(0.5, 15.0, 0.5) var maximum_gust_duration: float = 6.0
 @export var random_seed: int = 0
@@ -98,17 +98,27 @@ func _get_maximum_sway(multimesh_instance: MultiMeshInstance3D) -> float:
 	if mesh != null:
 		source_name += " " + mesh.resource_path.to_lower()
 
+	if (
+		source_name.contains("rock")
+		or source_name.contains("stone")
+		or source_name.contains("mushroom")
+		or source_name.contains("crystal")
+		or source_name.contains("stump")
+		or source_name.contains("log")
+		or source_name.contains("path")
+	):
+		return 0.0
 	if source_name.contains("bush") or source_name.contains("shrub"):
-		return deg_to_rad(1.8)
+		return deg_to_rad(5.0)
 	if (
 		source_name.contains("fern")
 		or source_name.contains("plant")
 		or source_name.contains("grass")
 	):
-		return deg_to_rad(2.4)
+		return deg_to_rad(7.0)
 	if source_name.contains("tree") or source_name.contains("pine"):
-		return deg_to_rad(0.45)
-	return 0.0
+		return deg_to_rad(1.25)
+	return deg_to_rad(2.0)
 
 
 func _update_gust(delta: float) -> void:

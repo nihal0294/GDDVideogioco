@@ -4,12 +4,20 @@ extends Node3D
 const VEGETATION_WIND_SCRIPT := preload(
 	"res://game/world/environment/vegetation_wind.gd"
 )
+const DAY_NIGHT_CYCLE_SCRIPT := preload(
+	"res://game/world/environment/day_night_cycle.gd"
+)
 
 @export_group("Wind")
-@export_range(0.0, 2.0, 0.05) var wind_strength: float = 0.75
+@export_range(0.0, 2.0, 0.05) var wind_strength: float = 1.0
 @export_range(5.0, 60.0, 1.0) var wind_update_rate_hz: float = 20.0
 @export_range(0.5, 15.0, 0.5) var minimum_gust_duration: float = 2.0
 @export_range(0.5, 15.0, 0.5) var maximum_gust_duration: float = 6.0
+@export_group("")
+
+@export_group("Time of Day")
+@export_range(0.0, 23.99, 0.25) var starting_game_hour: float = 8.0
+@export_range(1.0, 600.0, 1.0) var real_seconds_per_game_hour: float = 60.0
 @export_group("")
 
 signal generation_finished
@@ -138,6 +146,7 @@ func _ready() -> void:
 	_generate_terrain()
 	_scatter_nature()
 	_setup_vegetation_wind()
+	_setup_day_night_cycle()
 	_build_multimeshes()
 	generation_finished.emit()
 
@@ -222,6 +231,29 @@ func _setup_vegetation_wind() -> void:
 	wind_controller.minimum_gust_duration = minimum_gust_duration
 	wind_controller.maximum_gust_duration = maximum_gust_duration
 	add_child(wind_controller)
+
+
+func _setup_day_night_cycle() -> void:
+	var scene_root := get_parent()
+	if scene_root == null or get_node_or_null("TimeOfDay") != null:
+		return
+
+	var sun: DirectionalLight3D
+	var sun_nodes := scene_root.find_children("*", "DirectionalLight3D", true, false)
+	if not sun_nodes.is_empty():
+		sun = sun_nodes.front() as DirectionalLight3D
+	var world_environment: WorldEnvironment
+	var environment_nodes := scene_root.find_children("*", "WorldEnvironment", true, false)
+	if not environment_nodes.is_empty():
+		world_environment = environment_nodes.front() as WorldEnvironment
+
+	var day_night_cycle := DAY_NIGHT_CYCLE_SCRIPT.new()
+	day_night_cycle.name = "TimeOfDay"
+	day_night_cycle.sun = sun
+	day_night_cycle.world_environment = world_environment
+	day_night_cycle.starting_hour = starting_game_hour
+	day_night_cycle.real_seconds_per_game_hour = real_seconds_per_game_hour
+	add_child(day_night_cycle)
 
 
 func get_interactables() -> Array[InteractableArea3D]:

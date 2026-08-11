@@ -1,0 +1,165 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://game/world/maps/island/island.gd" id="1_island"]
+[ext_resource type="ArrayMesh" path="res://assets/models/environment/island/island.obj" id="2_mesh"]
+[ext_resource type="PackedScene" path="res://game/interaction/interactable_area_3d.tscn" id="3_interactable"]
+
+[node name="Island" type="StaticBody3D"]
+collision_layer = 1
+collision_mask = 0
+script = ExtResource("1_island")
+
+[node name="MapMesh" type="MeshInstance3D" parent="."]
+cast_shadow = 1
+mesh = ExtResource("2_mesh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+
+[node name="Interactables" type="Node3D" parent="."]
+
+[node name="Palm01" parent="Interactables" instance=ExtResource("3_interactable")]
+position = Vector3(-0.235, 2.157, -6.8)
+interaction_id = &"palm_01"
+display_name = "Palma 01"
+category = &"palm"
+interaction_radius = 1.15
+
+[node name="Palm02" parent="Interactables" instance=ExtResource("3_interactable")]
+position = Vector3(5.454, 3.602, -6.717)
+interaction_id = &"palm_02"
+display_name = "Palma 02"
+category = &"palm"
+interaction_radius = 1.15
+
+[node name="Palm03" parent="Interactables" instance=ExtResource("3_interactable")]
+position = Vector3(-6.182, 1.751, -5.381)
+interaction_id = &"palm_03"
+display_name = "Palma 03"
+category = &"palm"
+interaction_radius = 1.15
+
+[node name="Palm04" parent="Interactables" instance=ExtResource("3_interactable")]
+position = Vector3(-6.956, 1.736, -4.845)
+interaction_id = &"palm_04"
+display_name = "Palma 04"
+category = &"palm"
+interaction_radius = 1.15
+
+[node name="Palm05" parent="Interactables" instance=ExtResource("3_interactable")]
+position = Vector3(-9.823, 1.894, 2.145)
+interaction_id = &"palm_05"
+display_name = "Palma 05"
+category = &"palm"
+interaction_radius = 1.15
+
+[node name="Palm06" parent="Interactables" instance=ExtResource("3_interactable")]
+position = Vector3(0.222, 2.658, 2.663)
+interaction_id = &"palm_06"
+display_name = "Palma 06"
+category = &"palm"
+interaction_radius = 1.15
+
+[node name="Palm07" parent="Interactables" instance=ExtResource("3_interactable")]
+position = Vector3(1.194, 2.715, 2.777)
+interaction_id = &"palm_07"
+display_name = "Palma 07"
+category = &"palm"
+interaction_radius = 1.15
+
+[node name="Palm08" parent="Interactables" instance=ExtResource("3_interactable")]
+position = Vector3(-9.549, 1.962, 3.562)
+interaction_id = &"palm_08"
+display_name = "Palma 08"
+category = &"palm"
+interaction_radius = 1.15
+
+[node name="Palm09" parent="Interactables" instance=ExtResource("3_interactable")]
+position = Vector3(9.876, 1.852, 3.936)
+interaction_id = &"palm_09"
+display_name = "Palma 09"
+category = &"palm"
+interaction_radius = 1.15
+
+[node name="Palm10" parent="Interactables" instance=ExtResource("3_interactable")]
+position = Vector3(3.099, 3.804, 5.553)
+interaction_id = &"palm_10"
+display_name = "Palma 10"
+category = &"palm"
+interaction_radius = 1.15
+
+[node name="Palm11" parent="Interactables" instance=ExtResource("3_interactable")]
+position = Vector3(-3.071, 2.246, 11.337)
+interaction_id = &"palm_11"
+display_name = "Palma 11"
+category = &"palm"
+interaction_radius = 1.15
+
+[node name="Palm12" parent="Interactables" instance=ExtResource("3_interactable")]
+position = Vector3(6.823, 1.901, 14.49)
+interaction_id = &"palm_12"
+display_name = "Palma 12"
+category = &"palm"
+interaction_radius = 1.15
+
+[node name="Palm13" parent="Interactables" instance=ExtResource("3_interactable")]
+position = Vector3(6.023, 1.933, 14.518)
+interaction_id = &"palm_13"
+display_name = "Palma 13"
+category = &"palm"
+interaction_radius = 1.15
+
+[node name="Palm14" parent="Interactables" instance=ExtResource("3_interactable")]
+position = Vector3(-4.833, 1.682, 14.719)
+interaction_id = &"palm_14"
+display_name = "Palma 14"
+category = &"palm"
+interaction_radius = 1.15
+
+[node name="Tent01" parent="Interactables" instance=ExtResource("3_interactable")]
+position = Vector3(-3.363, 1.53, -5.537)
+interaction_id = &"tent_01"
+display_name = "Tenda 01"
+category = &"tent"
+interaction_radius = 1.5
+
+[node name="Tent02" parent="Interactables" instance=ExtResource("3_interactable")]
+position = Vector3(10.853, 3.587, -3.963)
+interaction_id = &"tent_02"
+display_name = "Tenda 02"
+category = &"tent"
+interaction_radius = 1.5
+
+[node name="Tent03" parent="Interactables" instance=ExtResource("3_interactable")]
+position = Vector3(9.74, 1.513, 7.12)
+interaction_id = &"tent_03"
+display_name = "Tenda 03"
+category = &"tent"
+interaction_radius = 1.5
+
+[node name="Tent04" parent="Interactables" instance=ExtResource("3_interactable")]
+position = Vector3(4.922, 3.676, 7.204)
+interaction_id = &"tent_04"
+display_name = "Tenda 04"
+category = &"tent"
+interaction_radius = 1.5
+
+[node name="Tent05" parent="Interactables" instance=ExtResource("3_interactable")]
+position = Vector3(-9.233, 1.632, 8.615)
+interaction_id = &"tent_05"
+display_name = "Tenda 05"
+category = &"tent"
+interaction_radius = 1.5
+
+[node name="Tent06" parent="Interactables" instance=ExtResource("3_interactable")]
+position = Vector3(-8.28, 1.284, 10.877)
+interaction_id = &"tent_06"
+display_name = "Tenda 06"
+category = &"tent"
+interaction_radius = 1.5
+
+[node name="Tent07" parent="Interactables" instance=ExtResource("3_interactable")]
+position = Vector3(1.65, 1.512, 15.538)
+interaction_id = &"tent_07"
+display_name = "Tenda 07"
+category = &"tent"
+interaction_radius = 1.5

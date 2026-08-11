@@ -1,0 +1,95 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/ui/inventory/inventory_screen.gd" id="1_inventory_screen"]
+
+[node name="InventoryScreen" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_inventory_screen")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.035, 0.05, 0.075, 0.98)
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 36
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 32
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Title" type="Label" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 34
+text = "Inventario"
+
+[node name="Categories" type="TabContainer" parent="MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 20
+
+[node name="Oggetti" type="MarginContainer" parent="MarginContainer/VBoxContainer/Categories"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="ObjectsList" type="ItemList" parent="MarginContainer/VBoxContainer/Categories/Oggetti"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+allow_reselect = true
+
+[node name="Sfere" type="CenterContainer" parent="MarginContainer/VBoxContainer/Categories"]
+layout_mode = 2
+
+[node name="EmptyLabel" type="Label" parent="MarginContainer/VBoxContainer/Categories/Sfere"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 20
+text = "Nessuna sfera"
+
+[node name="Pozioni" type="CenterContainer" parent="MarginContainer/VBoxContainer/Categories"]
+layout_mode = 2
+
+[node name="EmptyLabel" type="Label" parent="MarginContainer/VBoxContainer/Categories/Pozioni"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 20
+text = "Nessuna pozione"
+
+[node name="Equipaggiamento" type="CenterContainer" parent="MarginContainer/VBoxContainer/Categories"]
+layout_mode = 2
+
+[node name="EmptyLabel" type="Label" parent="MarginContainer/VBoxContainer/Categories/Equipaggiamento"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 20
+text = "Nessun equipaggiamento"
+
+[node name="Footer" type="Label" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+text = "Tab: chiudi inventario    •    Esc: apri menu"
+horizontal_alignment = 1

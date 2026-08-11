@@ -6,5 +6,7 @@
 script = ExtResource("1_item")
 item_id = &"cocco"
 display_name = "Cocco"
+description = "Un frutto tropicale ricco d'acqua, ottimo per uno spuntino."
 category = &"object"
 max_quantity = 10
+consumable = true

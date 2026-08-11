@@ -1,0 +1,20 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/world/maps/verdant_valley/verdant_valley.gd" id="1_map"]
+
+[node name="VerdantValley" type="Node3D"]
+script = ExtResource("1_map")
+
+[node name="GeneratedTerrain" type="Node3D" parent="."]
+
+[node name="Vegetation" type="Node3D" parent="."]
+
+[node name="PropCollisions" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="BoundaryVegetationCollisions" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Interactables" type="Node3D" parent="."]

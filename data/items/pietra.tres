@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ItemDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/inventory/item_definition.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+item_id = &"pietra"
+display_name = "Pietra"
+description = "Una pietra solida, utile per costruzioni e utensili."
+category = &"object"
+max_quantity = 10

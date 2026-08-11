@@ -1,8 +1,9 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://game/ui/game_ui.gd" id="1_game_ui"]
 [ext_resource type="PackedScene" path="res://game/ui/menu/pause_menu.tscn" id="2_pause_menu"]
 [ext_resource type="PackedScene" path="res://game/ui/inventory/inventory_screen.tscn" id="3_inventory_screen"]
+[ext_resource type="PackedScene" path="res://game/ui/notifications/notification_toast.tscn" id="4_notification"]
 
 [node name="GameUI" type="CanvasLayer"]
 process_mode = 3
@@ -12,3 +13,5 @@ script = ExtResource("1_game_ui")
 [node name="PauseMenu" parent="." instance=ExtResource("2_pause_menu")]
 
 [node name="InventoryScreen" parent="." instance=ExtResource("3_inventory_screen")]
+
+[node name="NotificationToast" parent="." instance=ExtResource("4_notification")]

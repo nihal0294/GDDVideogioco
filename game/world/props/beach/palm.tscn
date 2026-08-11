@@ -1,0 +1,97 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="PackedScene" path="res://game/interaction/interactable_area_3d.tscn" id="1_interactable"]
+
+[sub_resource type="StandardMaterial3D" id="Material_trunk"]
+albedo_color = Color(0.38, 0.2, 0.08, 1)
+roughness = 0.9
+
+[sub_resource type="StandardMaterial3D" id="Material_leaf"]
+albedo_color = Color(0.12, 0.48, 0.16, 1)
+roughness = 0.82
+
+[sub_resource type="StandardMaterial3D" id="Material_coconut"]
+albedo_color = Color(0.24, 0.12, 0.045, 1)
+roughness = 0.92
+
+[sub_resource type="CylinderMesh" id="Mesh_trunk"]
+material = SubResource("Material_trunk")
+top_radius = 0.2
+bottom_radius = 0.36
+height = 4.2
+radial_segments = 8
+rings = 4
+
+[sub_resource type="SphereMesh" id="Mesh_leaf"]
+material = SubResource("Material_leaf")
+radius = 1.0
+height = 2.0
+radial_segments = 8
+rings = 4
+
+[sub_resource type="SphereMesh" id="Mesh_coconut"]
+material = SubResource("Material_coconut")
+radius = 0.22
+height = 0.44
+radial_segments = 8
+rings = 4
+
+[sub_resource type="CylinderShape3D" id="Shape_trunk"]
+radius = 0.36
+height = 4.2
+
+[node name="Palm" type="StaticBody3D"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Trunk" type="MeshInstance3D" parent="."]
+position = Vector3(0, 2.1, 0)
+mesh = SubResource("Mesh_trunk")
+
+[node name="LeafNorth" type="MeshInstance3D" parent="."]
+position = Vector3(0, 4.25, -0.75)
+rotation = Vector3(0.22, 0, 0)
+scale = Vector3(0.42, 0.12, 1.45)
+mesh = SubResource("Mesh_leaf")
+
+[node name="LeafSouth" type="MeshInstance3D" parent="."]
+position = Vector3(0, 4.25, 0.75)
+rotation = Vector3(-0.22, 0, 0)
+scale = Vector3(0.42, 0.12, 1.45)
+mesh = SubResource("Mesh_leaf")
+
+[node name="LeafEast" type="MeshInstance3D" parent="."]
+position = Vector3(0.75, 4.25, 0)
+rotation = Vector3(0, 0, -0.22)
+scale = Vector3(1.45, 0.12, 0.42)
+mesh = SubResource("Mesh_leaf")
+
+[node name="LeafWest" type="MeshInstance3D" parent="."]
+position = Vector3(-0.75, 4.25, 0)
+rotation = Vector3(0, 0, 0.22)
+scale = Vector3(1.45, 0.12, 0.42)
+mesh = SubResource("Mesh_leaf")
+
+[node name="LeafDiagonal" type="MeshInstance3D" parent="."]
+position = Vector3(0.5, 4.3, 0.5)
+rotation = Vector3(-0.16, 0.785398, -0.16)
+scale = Vector3(0.38, 0.1, 1.25)
+mesh = SubResource("Mesh_leaf")
+
+[node name="CoconutA" type="MeshInstance3D" parent="."]
+position = Vector3(0.22, 3.96, 0.15)
+mesh = SubResource("Mesh_coconut")
+
+[node name="CoconutB" type="MeshInstance3D" parent="."]
+position = Vector3(-0.2, 4.02, 0.12)
+mesh = SubResource("Mesh_coconut")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 2.1, 0)
+shape = SubResource("Shape_trunk")
+
+[node name="Interactable" parent="." instance=ExtResource("1_interactable")]
+position = Vector3(0, 1.0, 0)
+display_name = "Palma"
+category = &"palm"
+interaction_radius = 1.45

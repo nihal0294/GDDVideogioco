@@ -9,4 +9,4 @@ starting_village/
 `-- navigation.tres
 ```
 
-Gli asset grafici usati dalla mappa vanno in `assets/`; layout e immagini di riferimento vanno in `docs/references/maps/`.
+Gli asset grafici usati dalla mappa vanno in `assets/maps/`; layout, sorgenti e immagini di riferimento vanno in `assets/references/maps/`.

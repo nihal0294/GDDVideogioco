@@ -1,0 +1,24 @@
+newmtl Materiais
+Kd 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ns 0.000000
+d 1.000000
+illum 1
+map_Kd ../textures/tents.png
+
+newmtl Materiais.001
+Kd 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ns 0.000000
+d 1.000000
+illum 1
+map_Kd ../textures/palms.png
+map_d ../textures/palms.png
+
+newmtl Materiais.002
+Kd 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ns 0.000000
+d 1.000000
+illum 1
+map_Kd ../textures/tents.png

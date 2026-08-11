@@ -5,6 +5,10 @@ signal map_object_interacted(
 	category: StringName,
 	interactor: Node3D
 )
+signal map_interactable_interacted(
+	interactable: InteractableArea3D,
+	interactor: Node3D
+)
 
 @onready var map_mesh: MeshInstance3D = $MapMesh
 @onready var collision_shape: CollisionShape3D = $CollisionShape3D
@@ -49,3 +53,4 @@ func _on_interactable_interacted(
 		interactable.category,
 		interactor
 	)
+	map_interactable_interacted.emit(interactable, interactor)

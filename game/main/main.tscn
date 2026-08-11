@@ -1,8 +1,8 @@
 [gd_scene load_steps=7 format=3 uid="uid://dvm5wnytkfnen"]
 
 [ext_resource type="PackedScene" path="res://game/player/player.tscn" id="1_player"]
-[ext_resource type="PackedScene" path="res://game/world/maps/island/island.tscn" id="2_island"]
-[ext_resource type="Script" path="res://game/main/main.gd" id="3_main"]
+[ext_resource type="PackedScene" path="res://game/world/maps/verdant_valley/verdant_valley.tscn" id="2_world_map"]
+[ext_resource type="Script" uid="uid://b6abff5uveb35" path="res://game/main/main.gd" id="3_main"]
 [ext_resource type="PackedScene" path="res://game/inventory/inventory.tscn" id="4_inventory"]
 [ext_resource type="PackedScene" path="res://game/ui/game_ui.tscn" id="5_game_ui"]
 
@@ -25,13 +25,12 @@ light_color = Color(1, 0.94, 0.84, 1)
 light_energy = 1.2
 shadow_enabled = true
 directional_shadow_mode = 1
-directional_shadow_max_distance = 45.0
+directional_shadow_max_distance = 120.0
 
-[node name="Island" parent="." instance=ExtResource("2_island")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.4730597, 3.9020529, -4.8557253)
+[node name="WorldMap" parent="." instance=ExtResource("2_world_map")]
 
 [node name="Player" parent="." instance=ExtResource("1_player")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 0)
 
 [node name="Inventory" parent="." instance=ExtResource("4_inventory")]
 

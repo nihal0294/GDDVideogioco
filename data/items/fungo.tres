@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/inventory/item_definition.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+item_id = &"fungo"
+display_name = "Fungo"
+description = "Un fungo di bosco commestibile dal sapore delicato."
+category = &"object"
+max_quantity = 10
+consumable = true

@@ -1,0 +1,29 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://game/world/maps/large_island/large_island.gd" id="1_map"]
+[ext_resource type="Shader" path="res://assets/maps/large_island/materials/water.gdshader" id="2_water_shader"]
+
+[sub_resource type="ShaderMaterial" id="Material_water"]
+render_priority = 0
+shader = ExtResource("2_water_shader")
+
+[sub_resource type="PlaneMesh" id="Mesh_water"]
+material = SubResource("Material_water")
+size = Vector2(420, 420)
+subdivide_width = 95
+subdivide_depth = 95
+
+[node name="LargeIsland" type="Node3D"]
+script = ExtResource("1_map")
+
+[node name="GeneratedTerrain" type="Node3D" parent="."]
+
+[node name="Water" type="MeshInstance3D" parent="."]
+cast_shadow = 0
+mesh = SubResource("Mesh_water")
+
+[node name="DeepWaterCollision" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Props" type="Node3D" parent="."]

@@ -3,10 +3,19 @@ extends CanvasLayer
 
 @onready var pause_menu: PauseMenu = $PauseMenu
 @onready var inventory_screen: InventoryScreen = $InventoryScreen
+@onready var notification_toast: NotificationToast = $NotificationToast
+
+
+func _ready() -> void:
+	inventory_screen.notification_requested.connect(show_notification)
 
 
 func setup(inventory: Inventory) -> void:
 	inventory_screen.setup(inventory)
+
+
+func show_notification(message: String, enqueue: bool = false) -> void:
+	notification_toast.show_message(message, enqueue)
 
 
 func _input(event: InputEvent) -> void:

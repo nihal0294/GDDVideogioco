@@ -1,0 +1,44 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="PackedScene" path="res://game/interaction/interactable_area_3d.tscn" id="1_interactable"]
+
+[sub_resource type="StandardMaterial3D" id="Material_fabric"]
+albedo_color = Color(0.84, 0.36, 0.18, 1)
+roughness = 0.88
+
+[sub_resource type="StandardMaterial3D" id="Material_entrance"]
+albedo_color = Color(0.16, 0.08, 0.055, 1)
+roughness = 1.0
+
+[sub_resource type="PrismMesh" id="Mesh_tent"]
+material = SubResource("Material_fabric")
+size = Vector3(3.2, 2.2, 2.7)
+
+[sub_resource type="PrismMesh" id="Mesh_entrance"]
+material = SubResource("Material_entrance")
+size = Vector3(1.0, 1.35, 0.06)
+
+[sub_resource type="BoxShape3D" id="Shape_tent"]
+size = Vector3(3.0, 1.8, 2.5)
+
+[node name="Tent" type="StaticBody3D"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Fabric" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.1, 0)
+mesh = SubResource("Mesh_tent")
+
+[node name="Entrance" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.68, -1.37)
+mesh = SubResource("Mesh_entrance")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.9, 0)
+shape = SubResource("Shape_tent")
+
+[node name="Interactable" parent="." instance=ExtResource("1_interactable")]
+position = Vector3(0, 0.9, -1.2)
+display_name = "Tenda"
+category = &"tent"
+interaction_radius = 1.8

@@ -1,16 +1,22 @@
-# Asset runtime
+# Assets
 
-Questa cartella contiene soltanto file importati e utilizzati dal gioco.
+Questa cartella raccoglie tutti i contenuti grafici e audio del progetto, inclusi i materiali di riferimento non utilizzati a runtime.
 
-Creare le sottocartelle quando diventano necessarie:
+```text
+assets/
+|-- maps/                  # Asset specifici delle mappe
+|-- characters/
+|   |-- player/            # Player giocabile
+|   |-- npcs/              # Personaggi non giocanti
+|   `-- mobs/              # Mob e Astral
+|-- environment/           # Props, vegetazione, edifici e terreno condiviso
+|-- ui/                    # Texture, icone e font dell'interfaccia
+|-- vfx/                   # Shader, particelle ed effetti visivi
+|-- audio/                 # Music, ambience, SFX e voice
+|-- shared/                # Materiali e texture realmente condivisi
+`-- references/            # Concept, sorgenti e moodboard esclusi da Godot
+```
 
-- `models/`: modelli 3D di personaggi, Astral, edifici e ambiente.
-- `textures/`: texture di personaggi, ambiente, mappe e interfaccia.
-- `materials/`: materiali condivisi tra più scene.
-- `animations/`: animazioni riutilizzabili.
-- `audio/music/`, `audio/ambience/`, `audio/sfx/`: contenuti audio.
-- `vfx/`: effetti visivi e shader.
-- `fonts/`: font usati dall'interfaccia.
-- `icons/`: icone di Astral, oggetti, abilità e UI.
+Ogni pacchetto runtime conserva insieme modelli, texture, materiali e licenza. Per esempio, `maps/island/` contiene la grafica importata dell'isola; la scena e gli script restano invece in `game/world/maps/island/`.
 
-Concept art, bozze e screenshot di riferimento appartengono a `docs/`, non qui.
+Le cartelle sotto `references/` contengono concept art, screenshot, moodboard e file sorgente. Sono escluse dall'importazione tramite `.gdignore` e non devono essere referenziate dalle scene Godot.

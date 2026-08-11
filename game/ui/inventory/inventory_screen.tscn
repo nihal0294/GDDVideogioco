@@ -55,11 +55,44 @@ theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 16
 
-[node name="ObjectsList" type="ItemList" parent="MarginContainer/VBoxContainer/Categories/Oggetti"]
+[node name="ObjectsLayout" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Categories/Oggetti"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ObjectsList" type="ItemList" parent="MarginContainer/VBoxContainer/Categories/Oggetti/ObjectsLayout"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 3
 theme_override_font_sizes/font_size = 20
 allow_reselect = true
+
+[node name="ItemDescription" type="Label" parent="MarginContainer/VBoxContainer/Categories/Oggetti/ObjectsLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 54)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.78, 0.82, 0.88, 1)
+theme_override_font_sizes/font_size = 17
+text = "Seleziona un oggetto per leggerne la descrizione."
+autowrap_mode = 2
+
+[node name="Actions" type="HBoxContainer" parent="MarginContainer/VBoxContainer/Categories/Oggetti/ObjectsLayout"]
+layout_mode = 2
+alignment = 2
+theme_override_constants/separation = 12
+
+[node name="ConsumeButton" type="Button" parent="MarginContainer/VBoxContainer/Categories/Oggetti/ObjectsLayout/Actions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 44)
+layout_mode = 2
+disabled = true
+text = "Consuma"
+
+[node name="DiscardButton" type="Button" parent="MarginContainer/VBoxContainer/Categories/Oggetti/ObjectsLayout/Actions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 44)
+layout_mode = 2
+disabled = true
+text = "Butta"
 
 [node name="Sfere" type="CenterContainer" parent="MarginContainer/VBoxContainer/Categories"]
 layout_mode = 2

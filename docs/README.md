@@ -212,7 +212,7 @@ Primo dlc a pagamento entro un anno
 
 [Trama](trama.md)
 
-[Modelli](modelli/README.md)
+[Catalogo visuale e modelli](../assets/references/CATALOG.md)
 
 [Sistemi](sistemi/README.md)
 

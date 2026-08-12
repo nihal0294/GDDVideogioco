@@ -9,3 +9,4 @@ display_name = "Assalto Radice"
 description = "Robuste radici emergono dal terreno con grande forza."
 power = 12
 element_id = &"natura"
+cooldown_turns = 3

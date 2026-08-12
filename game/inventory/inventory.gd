@@ -105,6 +105,33 @@ func get_items_in_category(category: StringName) -> Array[ItemDefinition]:
 	return matching_items
 
 
+func get_save_data() -> Dictionary:
+	var quantities: Dictionary = {}
+	for item_id: StringName in _definitions:
+		quantities[String(item_id)] = get_quantity(item_id)
+	return quantities
+
+
+func load_save_data(data: Dictionary) -> void:
+	for item_id: StringName in _definitions:
+		var definition := get_item_definition(item_id)
+		if definition == null:
+			continue
+		var raw_quantity: Variant = data.get(String(item_id), 0)
+		var saved_quantity := 0
+		if raw_quantity is int:
+			saved_quantity = int(raw_quantity)
+		elif raw_quantity is float and is_finite(float(raw_quantity)):
+			saved_quantity = int(raw_quantity)
+		var quantity := clampi(
+			saved_quantity,
+			0,
+			definition.max_quantity
+		)
+		_quantities[item_id] = quantity
+		item_quantity_changed.emit(definition, quantity)
+
+
 func _remove_item(item_id: StringName, amount: int) -> int:
 	if amount <= 0:
 		return 0

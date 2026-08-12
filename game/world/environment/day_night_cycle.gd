@@ -4,6 +4,8 @@ extends Node
 signal time_changed(hour: int, minute: int)
 signal new_day(day: int)
 
+const MAX_ELAPSED_DAYS: int = 2147483647
+
 @export_range(0.0, 23.99, 0.25) var starting_hour: float = 8.0
 @export_range(1.0, 600.0, 1.0) var real_seconds_per_game_hour: float = 60.0
 @export_range(0.0, 12.0, 0.25) var sunrise_hour: float = 6.0
@@ -74,6 +76,34 @@ func get_game_time() -> Dictionary[String, int]:
 
 func set_game_time(hour: int, minute: int = 0) -> void:
 	game_hour = fposmod(float(hour) + float(minute) / 60.0, 24.0)
+	_update_clock(true)
+	_update_lighting()
+
+
+func get_save_data() -> Dictionary:
+	return {
+		"game_hour": game_hour,
+		"elapsed_days": elapsed_days,
+	}
+
+
+func load_save_data(data: Dictionary) -> void:
+	var raw_game_hour: Variant = data.get("game_hour", starting_hour)
+	var saved_game_hour := starting_hour
+	if raw_game_hour is int:
+		saved_game_hour = float(raw_game_hour)
+	elif raw_game_hour is float and is_finite(float(raw_game_hour)):
+		saved_game_hour = float(raw_game_hour)
+	var raw_elapsed_days: Variant = data.get("elapsed_days", 0)
+	var saved_elapsed_days := 0
+	if raw_elapsed_days is int:
+		saved_elapsed_days = int(raw_elapsed_days)
+	elif raw_elapsed_days is float and is_finite(float(raw_elapsed_days)):
+		saved_elapsed_days = int(raw_elapsed_days)
+	game_hour = fposmod(saved_game_hour, 24.0)
+	elapsed_days = clampi(saved_elapsed_days, 0, MAX_ELAPSED_DAYS)
+	_clock_update_accumulator = 0.0
+	_last_displayed_minute = -1
 	_update_clock(true)
 	_update_lighting()
 

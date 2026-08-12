@@ -3,6 +3,8 @@ extends Node
 
 signal battle_finished(outcome: StringName, captured_astral: AstralInstance)
 
+const PRESENTATION := preload("res://game/astrals/astral_presentation.gd")
+
 enum BattleState {
 	SETUP,
 	INTRO,
@@ -51,6 +53,9 @@ var _state: BattleState = BattleState.SETUP
 var _previous_camera: Camera3D
 var _wild_move_index: int = 0
 var _wild_ko_experience_awarded: bool = false
+var _player_turn_index: int = 1
+var _wild_turn_index: int = 1
+var _move_ready_turns: Dictionary = {}
 
 
 func _ready() -> void:
@@ -79,7 +84,8 @@ func setup(
 	source_inventory: Inventory,
 	source_roster: AstralRoster,
 	wild_definition: AstralDefinition,
-	wild_level: int = 1
+	wild_level: int = 1,
+	encounter_random: RandomNumberGenerator = null
 ) -> void:
 	_inventory = source_inventory
 	_roster = source_roster
@@ -92,7 +98,14 @@ func setup(
 
 	if wild_definition != null:
 		_wild_astral = AstralInstance.new()
-		_wild_astral.setup(wild_definition, maxi(wild_level, 1))
+		if encounter_random != null:
+			_wild_astral.setup_with_random(
+				wild_definition,
+				maxi(wild_level, 1),
+				encounter_random
+			)
+		else:
+			_wild_astral.setup(wild_definition, maxi(wild_level, 1))
 
 	if (
 		_inventory != null
@@ -103,6 +116,9 @@ func setup(
 		_inventory.item_quantity_changed.connect(_on_item_quantity_changed)
 	_wild_move_index = 0
 	_wild_ko_experience_awarded = false
+	_player_turn_index = 1
+	_wild_turn_index = 1
+	_move_ready_turns.clear()
 	_apply_astral_visual(player_visual, _player_astral)
 	_apply_astral_visual(wild_visual, _wild_astral)
 	_refresh_status()
@@ -125,7 +141,7 @@ func begin() -> void:
 
 	_state = BattleState.INTRO
 	message_label.text = "%s appare dall'erba alta!" % (
-		_wild_astral.definition.display_name
+		PRESENTATION.format_identity(_wild_astral)
 	)
 	await _wait_for_action()
 	if _state == BattleState.INTRO:
@@ -151,9 +167,18 @@ func choose_move(move_index: int) -> void:
 		message_label.text = "Questa mossa non e disponibile."
 		_rebuild_move_buttons()
 		return
+	var cooldown_remaining := get_player_move_cooldown_remaining(move_index)
+	if cooldown_remaining > 0:
+		message_label.text = "%s deve attendere ancora %s." % [
+			move.display_name,
+			_format_turn_count(cooldown_remaining),
+		]
+		_rebuild_move_buttons()
+		return
 	_state = BattleState.RESOLVING
 	move_panel.hide()
 	_set_command_buttons_disabled(true)
+	_commit_player_move(move_index)
 	_resolve_player_move(move)
 
 
@@ -208,6 +233,7 @@ func use_item(item_id: StringName) -> void:
 		_rebuild_item_buttons()
 		return
 
+	_commit_player_turn()
 	_state = BattleState.RESOLVING
 	item_panel.hide()
 	message_label.text = "Hai usato %s." % definition.display_name
@@ -245,6 +271,8 @@ func switch_astral(roster_index: int) -> void:
 		_rebuild_astral_buttons(was_forced)
 		return
 
+	if not was_forced:
+		_commit_player_turn()
 	_player_astral = _roster.get_active_astral()
 	_state = BattleState.RESOLVING
 	astral_panel.hide()
@@ -272,6 +300,30 @@ func get_wild_astral() -> AstralInstance:
 
 func get_state() -> BattleState:
 	return _state
+
+
+func get_player_turn_index() -> int:
+	return _player_turn_index
+
+
+func get_wild_turn_index() -> int:
+	return _wild_turn_index
+
+
+func get_player_move_cooldown_remaining(move_index: int) -> int:
+	return _get_move_cooldown_remaining(
+		_player_astral,
+		move_index,
+		_player_turn_index
+	)
+
+
+func get_wild_move_cooldown_remaining(move_index: int) -> int:
+	return _get_move_cooldown_remaining(
+		_wild_astral,
+		move_index,
+		_wild_turn_index
+	)
 
 
 func _select_initial_usable_astral() -> void:
@@ -350,10 +402,13 @@ func _resolve_wild_ko() -> void:
 func _resolve_wild_counterattack() -> void:
 	if _state != BattleState.RESOLVING:
 		return
+	var move_index := _get_next_wild_move_index()
 	var move: AstralMoveDefinition = null
-	move = _get_next_wild_move()
+	if _wild_astral != null and move_index >= 0:
+		move = _wild_astral.get_move(move_index)
 	if move == null:
-		message_label.text = "%s non ha mosse disponibili." % (
+		_commit_wild_turn()
+		message_label.text = "%s attende che le sue mosse si ricarichino." % (
 			_wild_astral.definition.display_name
 		)
 		await _wait_for_action()
@@ -361,6 +416,7 @@ func _resolve_wild_counterattack() -> void:
 			_show_commands()
 		return
 
+	_commit_wild_move(move_index)
 	var calculated_damage := BattleMath.calculate_damage(
 		_wild_astral,
 		_player_astral,
@@ -391,16 +447,23 @@ func _resolve_wild_counterattack() -> void:
 	_show_commands()
 
 
-func _get_next_wild_move() -> AstralMoveDefinition:
+func _get_next_wild_move_index() -> int:
 	if _wild_astral == null:
-		return null
+		return -1
 	var moves := _wild_astral.get_moves()
 	if moves.is_empty():
-		return null
-	var move: AstralMoveDefinition = null
-	move = moves[_wild_move_index % moves.size()]
-	_wild_move_index += 1
-	return move
+		return -1
+	for offset: int in moves.size():
+		var candidate_index := (_wild_move_index + offset) % moves.size()
+		var candidate: AstralMoveDefinition = null
+		candidate = moves[candidate_index]
+		if candidate == null:
+			continue
+		if get_wild_move_cooldown_remaining(candidate_index) > 0:
+			continue
+		_wild_move_index = (candidate_index + 1) % moves.size()
+		return candidate_index
+	return -1
 
 
 func _resolve_capture() -> void:
@@ -478,7 +541,8 @@ func _show_astral_choices(forced: bool) -> void:
 
 func _rebuild_move_buttons() -> void:
 	_clear_dynamic_children(moves_grid)
-	var first_button: Button = null
+	var first_available_button: Button = null
+	var has_move_buttons := false
 	if _player_astral != null:
 		var moves := _player_astral.get_moves()
 		var visible_move_count := mini(moves.size(), 4)
@@ -487,26 +551,102 @@ func _rebuild_move_buttons() -> void:
 			move = moves[move_index]
 			if move == null:
 				continue
+			has_move_buttons = true
+			var cooldown_remaining := get_player_move_cooldown_remaining(
+				move_index
+			)
 			var move_button := Button.new()
-			move_button.custom_minimum_size = Vector2(240.0, 48.0)
-			move_button.text = "%s  [POT %d - %s]" % [
+			move_button.custom_minimum_size = Vector2(300.0, 54.0)
+			move_button.text = "%s  [POT %d | %s | CD %d%s]" % [
 				move.display_name,
 				move.power,
-				String(move.element_id).capitalize(),
+				PRESENTATION.format_element(move.element_id),
+				move.cooldown_turns,
+				(
+					" | Attesa %d" % cooldown_remaining
+					if cooldown_remaining > 0
+					else ""
+				),
 			]
-			move_button.tooltip_text = move.description
+			move_button.set_meta(&"move_index", move_index)
+			move_button.set_meta(&"cooldown_turns", move.cooldown_turns)
+			move_button.set_meta(&"cooldown_remaining", cooldown_remaining)
+			move_button.tooltip_text = "%s\nCooldown dopo l'uso: %s." % [
+				move.description,
+				_format_turn_count(move.cooldown_turns),
+			]
+			move_button.disabled = cooldown_remaining > 0
 			move_button.pressed.connect(choose_move.bind(move_index))
 			moves_grid.add_child(move_button)
-			if first_button == null:
-				first_button = move_button
-	if first_button == null:
+			if first_available_button == null and not move_button.disabled:
+				first_available_button = move_button
+	if not has_move_buttons:
 		var empty_label := Label.new()
 		empty_label.text = "Nessuna mossa disponibile."
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		moves_grid.add_child(empty_label)
 		move_back_button.grab_focus()
 		return
-	first_button.grab_focus()
+	if first_available_button != null:
+		first_available_button.grab_focus()
+	else:
+		move_back_button.grab_focus()
+
+
+func _commit_player_move(move_index: int) -> void:
+	_mark_move_used(
+		_player_astral,
+		move_index,
+		_player_turn_index
+	)
+	_commit_player_turn()
+
+
+func _commit_player_turn() -> void:
+	_player_turn_index += 1
+
+
+func _commit_wild_move(move_index: int) -> void:
+	_mark_move_used(
+		_wild_astral,
+		move_index,
+		_wild_turn_index
+	)
+	_commit_wild_turn()
+
+
+func _commit_wild_turn() -> void:
+	_wild_turn_index += 1
+
+
+func _mark_move_used(
+	astral: AstralInstance,
+	move_index: int,
+	current_turn: int
+) -> void:
+	if astral == null:
+		return
+	var move: AstralMoveDefinition = null
+	move = astral.get_move(move_index)
+	if move == null:
+		return
+	var astral_key := astral.get_instance_id()
+	var ready_turns: Dictionary = _move_ready_turns.get(astral_key, {})
+	ready_turns[move_index] = current_turn + move.cooldown_turns + 1
+	_move_ready_turns[astral_key] = ready_turns
+
+
+func _get_move_cooldown_remaining(
+	astral: AstralInstance,
+	move_index: int,
+	current_turn: int
+) -> int:
+	if astral == null or astral.get_move(move_index) == null:
+		return 0
+	var astral_key := astral.get_instance_id()
+	var ready_turns: Dictionary = _move_ready_turns.get(astral_key, {})
+	var ready_turn := int(ready_turns.get(move_index, current_turn))
+	return maxi(ready_turn - current_turn, 0)
 
 
 func _rebuild_item_buttons() -> void:
@@ -551,7 +691,7 @@ func _rebuild_astral_buttons(forced: bool) -> void:
 			var astral_button := Button.new()
 			astral_button.custom_minimum_size = Vector2(0.0, 46.0)
 			astral_button.text = "%s  Lv.%d  HP %d/%d" % [
-				astral.definition.display_name,
+				PRESENTATION.format_identity(astral),
 				astral.level,
 				astral.current_health,
 				astral.definition.max_health,
@@ -575,6 +715,13 @@ func _clear_dynamic_children(container: Node) -> void:
 	for child: Node in container.get_children():
 		container.remove_child(child)
 		child.queue_free()
+
+
+func _format_turn_count(turn_count: int) -> String:
+	return "%d %s" % [
+		turn_count,
+		"turno" if turn_count == 1 else "turni",
+	]
 
 
 func _hide_selection_panels() -> void:
@@ -611,7 +758,7 @@ func _refresh_astral_status(
 		health_bar.value = 0.0
 		return
 	name_label.text = "%s  Lv.%d" % [
-		astral.definition.display_name,
+		PRESENTATION.format_identity(astral),
 		astral.level,
 	]
 	health_label.text = "HP %d/%d" % [

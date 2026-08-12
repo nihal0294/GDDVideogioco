@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="GrimoireEntry" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://game/grimoire/grimoire_entry.gd" id="1_entry"]
+[ext_resource type="Resource" path="res://data/astrals/orso_fatato.tres" id="2_astral"]
+
+[resource]
+script = ExtResource("1_entry")
+entry_number = 4
+astral = ExtResource("2_astral")
+spawn_zones = ["Valle Verde — erba alta"]
+habitat = "Boschi fioriti e radure tranquille"
+field_notes = "Protegge i germogli più fragili e lascia piccole impronte luminose."

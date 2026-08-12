@@ -12,6 +12,9 @@ const WILD_ASTRAL: AstralDefinition = preload(
 const PLAYER_ASTRAL: AstralDefinition = preload(
 	"res://data/astrals/player_placeholder.tres"
 )
+const ASTRAL_PRESENTATION := preload(
+	"res://game/astrals/astral_presentation.gd"
+)
 
 var _failures: Array[String] = []
 var _received_encounter: bool = false
@@ -57,15 +60,20 @@ func _run() -> void:
 		await physics_frame
 
 	_test_main_structure(main)
+	_test_wild_astral_pool(main)
 	_test_player_and_camera(main)
 	_test_world_map(main)
 	await _test_squad_screen(main)
+	await _test_grimoire_and_player_profile(main)
+	await _test_options_and_save_system(main)
 	_test_astral_instance_progression()
+	_test_astral_sex_and_presentation()
 	await _test_astral_roster()
 	_test_battle_math()
 	await _test_encounter_wiring(main)
 	await _test_tall_grass_response(main)
 	await _test_battle_fight()
+	await _test_battle_cooldowns_and_presentation()
 	await _test_battle_ko_experience()
 	await _test_battle_items()
 	await _test_battle_capture()
@@ -73,6 +81,7 @@ func _run() -> void:
 	await _test_battle_switch()
 	await _test_battle_forced_switch()
 	_test_inventory_data()
+	_test_grimoire_profile_inputs()
 	_test_inputs()
 
 	main.queue_free()
@@ -105,11 +114,480 @@ func _test_main_structure(main: Node) -> void:
 		"AstralRoster mancante."
 	)
 	_expect(main.get_node_or_null("BattleHost") != null, "BattleHost mancante.")
+	_expect(main.get_node_or_null("Grimoire") is Grimoire, "Grimoire mancante.")
+	_expect(
+		main.get_node_or_null("PlayerProfile") is PlayerProfile,
+		"PlayerProfile mancante."
+	)
 	_expect(main.get_node_or_null("GameUI") != null, "GameUI mancante.")
+	_expect(main.get_node_or_null("SaveManager") is SaveManager, "SaveManager mancante.")
 	var sun := _find_first_node_of_type(main, "DirectionalLight3D")
 	var world_environment := _find_first_node_of_type(main, "WorldEnvironment")
 	_expect(sun != null, "Luce direzionale del sole mancante.")
 	_expect(world_environment != null, "WorldEnvironment mancante.")
+
+
+func _test_grimoire_and_player_profile(main: Node) -> void:
+	var game_ui := main.get_node_or_null("GameUI") as GameUI
+	var grimoire := main.get_node_or_null("Grimoire") as Grimoire
+	var profile := main.get_node_or_null("PlayerProfile") as PlayerProfile
+	var roster := main.get_node_or_null("AstralRoster") as AstralRoster
+	var grimoire_screen := main.get_node_or_null(
+		"GameUI/GrimoireScreen"
+	) as GrimoireScreen
+	var profile_screen := main.get_node_or_null(
+		"GameUI/PlayerProfileScreen"
+	) as PlayerProfileScreen
+	if (
+		game_ui == null
+		or grimoire == null
+		or profile == null
+		or roster == null
+		or grimoire_screen == null
+		or profile_screen == null
+	):
+		_fail("Impossibile verificare Grimorio e Profilo giocatore.")
+		return
+
+	var entries := grimoire.get_entries()
+	_expect(entries.size() == 5, "Il Grimorio non contiene le cinque specie iniziali.")
+	_expect(
+		grimoire.is_captured(PLAYER_ASTRAL.astral_id),
+		"Lo starter posseduto non risulta catturato nel Grimorio."
+	)
+	_expect(
+		grimoire.get_seen_species_count() == 1
+		and grimoire.get_captured_species_count() == 1,
+		"I contatori iniziali del Grimorio sono errati."
+	)
+
+	await _send_action(&"toggle_grimoire")
+	_expect(grimoire_screen.visible, "O non apre il Grimorio.")
+	_expect(paused, "Il Grimorio non sospende il mondo.")
+	_expect(not game_ui.squad_screen.visible, "Il Grimorio lascia aperta Squadra.")
+	var entry_list := grimoire_screen.get_node_or_null("%EntryList") as ItemList
+	var progress_label := grimoire_screen.get_node_or_null("%ProgressLabel") as Label
+	_expect(entry_list != null and entry_list.item_count == 5, "Indice Grimorio errato.")
+	_expect(
+		progress_label != null and "Visti 1/5" in progress_label.text,
+		"Il Grimorio non mostra il progresso delle scoperte."
+	)
+	await _send_action(&"toggle_grimoire")
+	_expect(not grimoire_screen.visible and not paused, "O non chiude il Grimorio.")
+
+	var pool_value: Variant = main.call("get_wild_astral_pool")
+	var pool := pool_value as Array
+	var discovered_definition: AstralDefinition = null
+	if pool != null and not pool.is_empty():
+		discovered_definition = pool.front() as AstralDefinition
+	if discovered_definition == null:
+		_fail("Nessuna specie disponibile per il test Grimorio.")
+		return
+	_expect(
+		grimoire.register_seen(discovered_definition),
+		"Avvistare una nuova specie non aggiorna il Grimorio."
+	)
+	_expect(
+		grimoire.get_discovery_state(discovered_definition.astral_id)
+		== Grimoire.DiscoveryState.SEEN,
+		"La specie avvistata non resta nello stato SEEN."
+	)
+
+	var source := AstralInstance.new()
+	source.setup(discovered_definition, 3, AstralInstance.Sex.FEMALE)
+	var initial_capture_count := profile.captured_monster_count
+	_expect(roster.capture_astral(source), "Cattura di test rifiutata dal roster.")
+	_expect(
+		grimoire.is_captured(discovered_definition.astral_id),
+		"La cattura non completa la pagina del Grimorio."
+	)
+	_expect(
+		profile.captured_monster_count == initial_capture_count + 1,
+		"Il profilo non incrementa il numero di Astral catturati."
+	)
+
+	await _send_action(&"toggle_player_profile")
+	_expect(profile_screen.visible, "P non apre il profilo giocatore.")
+	_expect(paused, "Il profilo giocatore non sospende il mondo.")
+	var currency_value := profile_screen.get_node_or_null("%CurrencyValue") as Label
+	var captured_value := profile_screen.get_node_or_null("%CapturedValue") as Label
+	var medals_summary := profile_screen.get_node_or_null("%MedalsSummary") as Label
+	var medal_grid := profile_screen.get_node_or_null("%MedalGrid") as GridContainer
+	var preview := profile_screen.get_node_or_null(
+		"OuterMargin/Layout/Content/PortraitPanel/PortraitMargin/PortraitLayout/Preview/SubViewport/PlayerPreview/Body"
+	) as MeshInstance3D
+	_expect(currency_value != null and "0 Fiorini" in currency_value.text, "Valuta profilo errata.")
+	_expect(
+		captured_value != null
+		and captured_value.text == str(profile.captured_monster_count),
+		"Conteggio catture non aggiornato nella schermata profilo."
+	)
+	_expect(medals_summary != null and medals_summary.text == "0 / 8", "Riepilogo medaglie errato.")
+	_expect(medal_grid != null and medal_grid.get_child_count() == 8, "Gli otto slot medaglia non sono presenti.")
+	_expect(preview != null and preview.mesh is CapsuleMesh, "Il ritratto provvisorio non usa una pillola 3D.")
+
+	_expect(profile.add_florins(125), "Impossibile aggiungere Fiorini al profilo.")
+	_expect(profile.earn_medal(0), "Impossibile assegnare la prima medaglia.")
+	_expect(currency_value.text == "125 Fiorini", "La UI non aggiorna i Fiorini.")
+	_expect(medals_summary.text == "1 / 8", "La UI non aggiorna le medaglie.")
+
+	await _send_action(&"toggle_grimoire")
+	_expect(grimoire_screen.visible, "O non apre il Grimorio dal profilo.")
+	_expect(not profile_screen.visible, "Aprire il Grimorio non chiude il profilo.")
+	game_ui.set_pause_lock(&"battle", true)
+	_expect(not grimoire_screen.visible, "Il battle lock non chiude il Grimorio.")
+	await _send_action(&"toggle_player_profile")
+	_expect(not profile_screen.visible, "P apre il profilo durante il battle lock.")
+	game_ui.set_pause_lock(&"battle", false)
+	_expect(not paused, "Rimuovere il battle lock lascia il mondo in pausa.")
+
+
+func _test_options_and_save_system(main: Node) -> void:
+	var game_ui := main.get_node_or_null("GameUI") as GameUI
+	var save_manager := main.get_node_or_null("SaveManager") as SaveManager
+	var player := main.get_node_or_null("Player") as CharacterBody3D
+	var inventory := main.get_node_or_null("Inventory") as Inventory
+	var roster := main.get_node_or_null("AstralRoster") as AstralRoster
+	var grimoire := main.get_node_or_null("Grimoire") as Grimoire
+	var profile := main.get_node_or_null("PlayerProfile") as PlayerProfile
+	var world_map := main.get_node_or_null("WorldMap") as Node3D
+	if (
+		game_ui == null
+		or save_manager == null
+		or player == null
+		or inventory == null
+		or roster == null
+		or grimoire == null
+		or profile == null
+		or world_map == null
+	):
+		_fail("Impossibile verificare Opzioni e salvataggi.")
+		return
+
+	var test_directory := "user://codex_main_scene_smoke_saves"
+	_cleanup_test_save_directory(test_directory)
+	_expect(
+		save_manager.set_save_directory(test_directory),
+		"SaveManager rifiuta una directory di test valida in user://."
+	)
+	_expect(
+		save_manager.get_slot_summaries().size() == SaveManager.MAX_SAVE_SLOTS,
+		"La pool non contiene esattamente dieci slot."
+	)
+	_expect(not save_manager.has_saves(), "Una pool vuota risulta occupata.")
+
+	await _send_action(&"toggle_menu")
+	_expect(game_ui.pause_menu.visible and paused, "Esc non apre e sospende il menu.")
+	var continue_button := game_ui.pause_menu.get_node_or_null("%ContinueButton") as Button
+	var options_button := game_ui.pause_menu.get_node_or_null("%OptionsButton") as Button
+	var save_button := game_ui.pause_menu.get_node_or_null("%SaveButton") as Button
+	var load_button := game_ui.pause_menu.get_node_or_null("%LoadButton") as Button
+	_expect(
+		continue_button != null and continue_button.disabled,
+		"Continua non è disabilitato senza salvataggi."
+	)
+	_expect(
+		load_button != null and load_button.disabled,
+		"Carica non è disabilitato senza salvataggi."
+	)
+	if options_button == null or save_button == null:
+		_fail("Pulsanti Opzioni o Salva mancanti dal menu.")
+		_cleanup_test_save_directory(test_directory)
+		return
+
+	options_button.emit_signal("pressed")
+	await process_frame
+	_expect(game_ui.options_screen.visible, "Opzioni non apre la schermata dedicata.")
+	_expect(not game_ui.pause_menu.visible and paused, "Opzioni interrompe la pausa.")
+	var expected_categories: Array[String] = [
+		"Impostazioni di gioco",
+		"Impostazioni Grafica",
+		"Impostazioni Video",
+		"Impostazioni Audio",
+		"Controlli",
+		"Lingua",
+		"Interfaccia",
+	]
+	var category_nodes: Array[String] = [
+		"GameplayButton",
+		"GraphicsButton",
+		"VideoButton",
+		"AudioButton",
+		"ControlsButton",
+		"LanguageButton",
+		"InterfaceButton",
+	]
+	for category_index: int in expected_categories.size():
+		var category_button := game_ui.options_screen.get_node_or_null(
+			"%%%s" % category_nodes[category_index]
+		) as Button
+		_expect(
+			category_button != null
+			and category_button.text == expected_categories[category_index],
+			"Categoria Opzioni mancante o fuori ordine: %s."
+			% expected_categories[category_index]
+		)
+	var apply_button := game_ui.options_screen.get_node_or_null("%ApplyButton") as Button
+	var options_back := game_ui.options_screen.get_node_or_null("%BackButton") as Button
+	if apply_button != null:
+		apply_button.emit_signal("pressed")
+		await process_frame
+		_expect(game_ui.options_screen.visible, "Applica chiude la schermata Opzioni.")
+	else:
+		_fail("Pulsante Applica mancante.")
+	if options_back != null:
+		options_back.emit_signal("pressed")
+		await process_frame
+		_expect(
+			game_ui.pause_menu.visible and not game_ui.options_screen.visible,
+			"Indietro non torna al menu principale."
+		)
+	else:
+		_fail("Pulsante Indietro mancante nelle Opzioni.")
+
+	var active_astral := roster.get_active_astral()
+	if active_astral == null or active_astral.definition == null:
+		_fail("Astral attivo mancante per il round-trip del salvataggio.")
+		_cleanup_test_save_directory(test_directory)
+		return
+	player.global_position = Vector3(12.5, 7.25, -9.75)
+	var player_visual := player.get_node_or_null("Visual") as Node3D
+	if player_visual != null:
+		player_visual.rotation.y = 0.73
+	inventory.load_save_data({"cocco": 4, "legno": 3})
+	active_astral.current_health = maxi(active_astral.definition.max_health - 3, 1)
+	active_astral.experience = 47
+	if active_astral.get_move_count() > 1:
+		active_astral.reorder_move(0, active_astral.get_move_count() - 1)
+	var saved_move_id := (
+		active_astral.get_move(0).move_id
+		if active_astral.get_move(0) != null
+		else &""
+	)
+	profile.load_save_data({
+		"player_name": "Avventuriero",
+		"currency_name": "Fiorini",
+		"florins": 4321,
+		"captured_monster_count": 6,
+		"earned_medals": [true, false, true, false, false, false, false, false],
+		"adventure_summary": "Riepilogo persistente dello smoke test.",
+	})
+	var day_night := world_map.get_node_or_null("TimeOfDay") as DayNightCycle
+	if day_night != null:
+		day_night.load_save_data({"game_hour": 22.5, "elapsed_days": 7})
+	var interactables: Array = []
+	if world_map.has_method("get_interactables"):
+		var raw_interactables: Variant = world_map.call("get_interactables")
+		if raw_interactables is Array:
+			interactables = raw_interactables
+	var saved_interactable: InteractableArea3D = null
+	if not interactables.is_empty():
+		saved_interactable = interactables.front() as InteractableArea3D
+	if saved_interactable != null:
+		saved_interactable.set_remaining_item_count(0)
+
+	save_button.emit_signal("pressed")
+	await process_frame
+	_expect(
+		game_ui.save_slots_screen.visible
+		and game_ui.save_slots_screen.get_mode() == SaveSlotsScreen.Mode.SAVE,
+		"Salva non apre la schermata slot in modalità SAVE."
+	)
+	var slot_button_count := 0
+	for slot_number: int in SaveSlotsScreen.MAX_SLOTS:
+		var slot_button := game_ui.save_slots_screen.get_node_or_null(
+			"%%Slot%02dButton" % (slot_number + 1)
+		) as Button
+		if slot_button != null:
+			slot_button_count += 1
+	_expect(slot_button_count == 10, "La schermata non mostra dieci slot.")
+	var first_slot := game_ui.save_slots_screen.get_node_or_null("%Slot01Button") as Button
+	if first_slot == null:
+		_fail("Primo slot di salvataggio mancante.")
+		_cleanup_test_save_directory(test_directory)
+		return
+	first_slot.emit_signal("pressed")
+	await process_frame
+	_expect(FileAccess.file_exists(save_manager.get_slot_path(0)), "Lo slot 1 non è persistito su disco.")
+	_expect(save_manager.has_saves(), "SaveManager non rileva lo slot appena creato.")
+	_expect(
+		save_manager.get_latest_slot_index() == 0,
+		"Lo slot appena creato non è il più recente."
+	)
+	if continue_button != null and load_button != null:
+		_expect(
+			not continue_button.disabled and not load_button.disabled,
+			"Continua e Carica non si attivano dopo il primo salvataggio."
+		)
+
+	player.global_position = Vector3(-30.0, 2.0, 31.0)
+	if player_visual != null:
+		player_visual.rotation.y = -1.2
+	inventory.load_save_data({})
+	active_astral.current_health = 1
+	active_astral.experience = 0
+	profile.load_save_data({"florins": 0, "earned_medals": []})
+	if day_night != null:
+		day_night.load_save_data({"game_hour": 3.0, "elapsed_days": 0})
+	if saved_interactable != null:
+		saved_interactable.set_remaining_item_count(saved_interactable.max_generated_items)
+
+	_expect(save_manager.load_save(0), "Caricamento dello slot 1 fallito.")
+	_expect(
+		player.global_position.is_equal_approx(Vector3(12.5, 7.25, -9.75)),
+		"La posizione del giocatore non è stata ripristinata."
+	)
+	_expect(
+		player_visual == null or is_equal_approx(player_visual.rotation.y, 0.73),
+		"L'orientamento del giocatore non è stato ripristinato."
+	)
+	_expect(
+		inventory.get_quantity(&"cocco") == 4
+		and inventory.get_quantity(&"legno") == 3,
+		"L'inventario non supera il round-trip."
+	)
+	var loaded_astral := roster.get_active_astral()
+	_expect(
+		loaded_astral != null
+		and loaded_astral.current_health == maxi(loaded_astral.definition.max_health - 3, 1)
+		and loaded_astral.experience == 47,
+		"HP o EXP dell'Astral non sono stati ripristinati."
+	)
+	_expect(
+		loaded_astral != null
+		and loaded_astral.get_move(0) != null
+		and loaded_astral.get_move(0).move_id == saved_move_id,
+		"L'ordine delle mosse non è stato ripristinato."
+	)
+	_expect(
+		profile.florins == 4321
+		and profile.captured_monster_count == 6
+		and profile.get_medal_count() == 2,
+		"Il profilo giocatore non supera il round-trip."
+	)
+	if day_night != null:
+		_expect(
+			absf(day_night.game_hour - 22.5) < 0.05 and day_night.elapsed_days == 7,
+			"Ora o giorno non sono stati ripristinati."
+		)
+	if saved_interactable != null:
+		_expect(
+			saved_interactable.remaining_item_count == 0,
+			"Lo stock dell'oggetto di mappa non è stato ripristinato."
+		)
+
+	player.global_position = Vector3(24.0, 8.0, 15.0)
+	_expect(save_manager.create_save(1), "Creazione del secondo slot fallita.")
+	player.global_position = Vector3.ZERO
+	var slots_back := game_ui.save_slots_screen.get_node_or_null("%BackButton") as Button
+	if slots_back != null:
+		slots_back.emit_signal("pressed")
+		await process_frame
+	_expect(game_ui.pause_menu.visible, "Indietro dagli slot non torna al menu.")
+	continue_button = game_ui.pause_menu.get_node_or_null("%ContinueButton") as Button
+	if continue_button != null:
+		continue_button.emit_signal("pressed")
+		await process_frame
+		_expect(
+			player.global_position.is_equal_approx(Vector3(24.0, 8.0, 15.0)),
+			"Continua non carica il salvataggio più recente."
+		)
+		_expect(not paused, "Continua non restituisce il controllo al mondo.")
+	else:
+		_fail("Pulsante Continua mancante dopo il salvataggio.")
+	_expect(
+		save_manager.get_slot_path(SaveManager.MAX_SAVE_SLOTS).is_empty()
+		and save_manager.get_slot_summaries().size() == SaveManager.MAX_SAVE_SLOTS,
+		"SaveManager espone un undicesimo slot."
+	)
+	var occupied_slot_count := 0
+	for summary: Dictionary in save_manager.get_slot_summaries():
+		if bool(summary.get("occupied", false)):
+			occupied_slot_count += 1
+	_expect(
+		occupied_slot_count == 2,
+		"La pool non conserva esattamente i due slot creati."
+	)
+
+	_cleanup_test_save_directory(test_directory)
+	save_manager.set_save_directory(SaveManager.DEFAULT_SAVE_DIRECTORY)
+
+
+func _cleanup_test_save_directory(directory_path: String) -> void:
+	if not directory_path.begins_with("user://codex_main_scene_smoke_saves"):
+		return
+	for slot_index: int in SaveManager.MAX_SAVE_SLOTS:
+		var slot_path := "%s/save_%02d.json" % [directory_path, slot_index + 1]
+		if FileAccess.file_exists(slot_path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(slot_path))
+	var absolute_directory := ProjectSettings.globalize_path(directory_path)
+	if DirAccess.dir_exists_absolute(absolute_directory):
+		DirAccess.remove_absolute(absolute_directory)
+
+
+func _test_wild_astral_pool(main: Node) -> void:
+	if not main.has_method("get_wild_astral_pool"):
+		_fail("Main non espone il pool degli Astral selvatici.")
+		return
+	var raw_pool: Variant = main.call("get_wild_astral_pool")
+	if not (raw_pool is Array):
+		_fail("Il pool degli Astral selvatici non e un Array.")
+		return
+	var pool := raw_pool as Array
+	_expect(pool.size() == 4, "Il pool selvatico non contiene esattamente quattro specie.")
+	var expected_element_counts: Dictionary[StringName, int] = {
+		&"neutro": 1,
+		&"fuoco": 1,
+		&"acqua": 1,
+		&"natura": 1,
+	}
+	var actual_element_counts: Dictionary[StringName, int] = {}
+	var seen_ids: Dictionary[StringName, bool] = {}
+	var expected_cooldowns: Array[int] = [0, 1, 2, 3]
+	for candidate: Variant in pool:
+		var definition := candidate as AstralDefinition
+		if definition == null:
+			_fail("Il pool selvatico contiene una definizione non valida.")
+			continue
+		_expect(
+			not definition.astral_id.is_empty(),
+			"Una specie selvatica non possiede astral_id."
+		)
+		_expect(
+			not seen_ids.has(definition.astral_id),
+			"Il pool selvatico contiene astral_id duplicati: %s."
+			% definition.astral_id
+		)
+		seen_ids[definition.astral_id] = true
+		actual_element_counts[definition.primary_element] = (
+			actual_element_counts.get(definition.primary_element, 0) + 1
+		)
+		_expect(
+			definition.starting_moves.size() == 4,
+			"%s non possiede quattro mosse iniziali." % definition.display_name
+		)
+		var cooldowns: Array[int] = []
+		for move: AstralMoveDefinition in definition.starting_moves:
+			if move == null:
+				_fail("%s contiene una mossa null." % definition.display_name)
+				continue
+			cooldowns.append(move.cooldown_turns)
+		cooldowns.sort()
+		_expect(
+			cooldowns == expected_cooldowns,
+			"%s non copre i cooldown 0, 1, 2 e 3." % definition.display_name
+		)
+	_expect(
+		actual_element_counts == expected_element_counts,
+		"Le quattro specie non coprono una volta ciascuna neutro, fuoco, acqua e natura."
+	)
+	if main.has_method("set_encounter_random_seed"):
+		main.call("set_encounter_random_seed", 731)
+	if main.has_method("get_random_wild_astral_definition"):
+		var selected := main.call("get_random_wild_astral_definition") as AstralDefinition
+		_expect(selected != null and pool.has(selected), "Main estrae una specie fuori dal pool.")
+	else:
+		_fail("Main non espone l'estrazione casuale dal pool selvatico.")
 
 
 func _test_player_and_camera(main: Node) -> void:
@@ -154,9 +632,13 @@ func _test_squad_screen(main: Node) -> void:
 		"Squadra lascia aperto l'inventario."
 	)
 	var astral_list := squad_screen.get_node_or_null("%AstralList") as ItemList
+	var astral_name := squad_screen.get_node_or_null("%AstralName") as Label
+	var elements_value := squad_screen.get_node_or_null("%ElementsValue") as Label
 	var level_value := squad_screen.get_node_or_null("%LevelValue") as Label
 	var experience_value := squad_screen.get_node_or_null("%ExperienceValue") as Label
 	_expect(astral_list != null, "Lista Astral mancante dalla schermata Squadra.")
+	_expect(astral_name != null, "Nome Astral mancante dalla schermata Squadra.")
+	_expect(elements_value != null, "Elemento Astral mancante dalla schermata Squadra.")
 	_expect(level_value != null, "Livello mancante dalla scheda Astral.")
 	_expect(experience_value != null, "EXP mancante dalla scheda Astral.")
 	if astral_list != null:
@@ -168,6 +650,18 @@ func _test_squad_screen(main: Node) -> void:
 			astral_list.item_count > 0 and "Lv.5" in astral_list.get_item_text(0),
 			"La lista Squadra non mostra il livello dello starter."
 		)
+		if starter != null and starter.definition != null and astral_list.item_count > 0:
+			var list_identity := astral_list.get_item_text(0)
+			_expect(
+				ASTRAL_PRESENTATION.get_sex_symbol(starter.sex) in list_identity,
+				"La lista Squadra non mostra il simbolo del sesso."
+			)
+			_expect(
+				ASTRAL_PRESENTATION.get_element_symbol(
+					starter.definition.primary_element
+				) in list_identity,
+				"La lista Squadra non mostra il simbolo elementale."
+			)
 		var focus_owner: Control = root.gui_get_focus_owner()
 		_expect(
 			focus_owner == astral_list,
@@ -180,13 +674,36 @@ func _test_squad_screen(main: Node) -> void:
 			"EXP 0 / 100" in experience_value.text,
 			"La scheda non mostra EXP e soglia del prossimo livello."
 		)
-	for move_node_name: String in ["MoveOne", "MoveTwo", "MoveThree", "MoveFour"]:
+	if starter != null and starter.definition != null:
+		var expected_identity := ASTRAL_PRESENTATION.format_identity(starter)
+		if astral_name != null:
+			_expect(
+				astral_name.text == expected_identity,
+				"La scheda Squadra non mostra nome, sesso ed elemento insieme."
+			)
+		if elements_value != null:
+			_expect(
+				ASTRAL_PRESENTATION.format_element(
+					starter.definition.primary_element
+				) in elements_value.text,
+				"La scheda Squadra non presenta simbolo e nome dell'elemento."
+			)
+	var move_node_names: Array[String] = [
+		"MoveOne", "MoveTwo", "MoveThree", "MoveFour"
+	]
+	for move_index: int in move_node_names.size():
+		var move_node_name := move_node_names[move_index]
 		var move_label := squad_screen.get_node_or_null("%%%s" % move_node_name) as Label
 		_expect(move_label != null, "Slot mossa mancante: %s." % move_node_name)
 		if move_label != null:
 			_expect(
 				not "Slot libero" in move_label.text,
 				"La scheda non mostra tutte e quattro le mosse dello starter."
+			)
+			_expect(
+				"CD %d" % move_index in move_label.text,
+				"La scheda Squadra non mostra il cooldown della mossa %d."
+				% (move_index + 1)
 			)
 
 	await _send_action(&"toggle_inventory")
@@ -338,6 +855,56 @@ func _test_astral_instance_progression() -> void:
 	)
 
 
+func _test_astral_sex_and_presentation() -> void:
+	_expect(
+		AstralInstance.sex_from_roll(0.0) == AstralInstance.Sex.MALE,
+		"Il limite inferiore non genera un Astral maschio."
+	)
+	_expect(
+		AstralInstance.sex_from_roll(0.499999) == AstralInstance.Sex.MALE,
+		"Un roll sotto il 50% non genera un Astral maschio."
+	)
+	_expect(
+		AstralInstance.sex_from_roll(0.5) == AstralInstance.Sex.FEMALE,
+		"La soglia del 50% non passa al sesso femminile."
+	)
+	_expect(
+		AstralInstance.sex_from_roll(1.0) == AstralInstance.Sex.FEMALE,
+		"Il limite superiore non genera un Astral femmina."
+	)
+
+	var female := AstralInstance.new()
+	female.setup(PLAYER_ASTRAL, 5, AstralInstance.Sex.FEMALE)
+	var female_copy := female.duplicate_runtime()
+	_expect(female.sex == AstralInstance.Sex.FEMALE, "setup ignora il sesso forzato.")
+	_expect(
+		female_copy != female and female_copy.sex == female.sex,
+		"duplicate_runtime non conserva il sesso dell'Astral."
+	)
+	_expect(
+		ASTRAL_PRESENTATION.format_identity(female)
+		== "%s ♀ 🍃" % PLAYER_ASTRAL.display_name,
+		"L'identita Astral non combina nome, sesso ed elemento."
+	)
+	var expected_symbols: Dictionary[StringName, String] = {
+		&"neutro": "✦",
+		&"fuoco": "🔥",
+		&"acqua": "💧",
+		&"natura": "🍃",
+	}
+	for element_id: StringName in expected_symbols:
+		_expect(
+			ASTRAL_PRESENTATION.get_element_symbol(element_id)
+			== expected_symbols[element_id],
+			"Simbolo errato per l'elemento %s." % element_id
+		)
+	_expect(
+		ASTRAL_PRESENTATION.get_sex_symbol(AstralInstance.Sex.MALE) == "♂"
+		and ASTRAL_PRESENTATION.get_sex_symbol(AstralInstance.Sex.FEMALE) == "♀",
+		"I simboli maschio/femmina non corrispondono ai sessi."
+	)
+
+
 func _test_astral_roster() -> void:
 	var roster := ASTRAL_ROSTER_SCENE.instantiate() as AstralRoster
 	if roster == null:
@@ -359,6 +926,7 @@ func _test_astral_roster() -> void:
 	_expect(roster.get_astral_count() == 1, "get_astrals espone l'array interno.")
 
 	var first_source := _make_test_astral_instance(WILD_ASTRAL, 3)
+	first_source.sex = AstralInstance.Sex.FEMALE
 	first_source.current_health = 11
 	first_source.experience = 77
 	var original_first_move: AstralMoveDefinition = first_source.get_move(0)
@@ -373,6 +941,10 @@ func _test_astral_roster() -> void:
 			and first_captured.current_health == 11
 			and first_captured.experience == 77,
 			"La cattura non copia livello, HP o EXP."
+		)
+		_expect(
+			first_captured.sex == AstralInstance.Sex.FEMALE,
+			"La cattura nel roster non conserva il sesso."
 		)
 		_expect(
 			first_captured.get_move(0) == original_first_move
@@ -503,6 +1075,32 @@ func _test_battle_math() -> void:
 		),
 		"Il fuoco non e superefficace contro la natura."
 	)
+	_expect(
+		is_equal_approx(
+			BattleMath.get_element_multiplier(&"acqua", fire_definition),
+			2.0
+		),
+		"L'acqua non e superefficace contro il fuoco."
+	)
+	_expect(
+		is_equal_approx(
+			BattleMath.get_element_multiplier(&"natura", water_definition),
+			2.0
+		),
+		"La natura non e superefficace contro l'acqua."
+	)
+	for neutral_defender: AstralDefinition in [
+		fire_definition,
+		water_definition,
+		nature_definition,
+	]:
+		_expect(
+			is_equal_approx(
+				BattleMath.get_element_multiplier(&"neutro", neutral_defender),
+				1.0
+			),
+			"L'elemento neutro applica un moltiplicatore diverso da 1."
+		)
 	var fire_attacker := _make_test_astral_instance(fire_definition, 10)
 	var nature_defender := _make_test_astral_instance(nature_definition, 5)
 	_expect(
@@ -788,6 +1386,23 @@ func _cleanup_battle_fixture(fixture: Dictionary) -> void:
 	await process_frame
 
 
+func _find_battle_move_button(
+	battle: BattleController,
+	move_index: int
+) -> Button:
+	if battle == null:
+		return null
+	for child: Node in battle.moves_grid.get_children():
+		var move_button := child as Button
+		if (
+			move_button != null
+			and move_button.has_meta(&"move_index")
+			and int(move_button.get_meta(&"move_index")) == move_index
+		):
+			return move_button
+	return null
+
+
 func _on_test_battle_finished(
 	outcome: StringName,
 	captured_astral: AstralInstance
@@ -860,6 +1475,165 @@ func _test_battle_fight() -> void:
 		"Un attacco non letale assegna EXP."
 	)
 	_expect(_battle_outcome.is_empty(), "Lotta termina prematuramente la battaglia.")
+	await _cleanup_battle_fixture(fixture)
+
+
+func _test_battle_cooldowns_and_presentation() -> void:
+	var fixture := await _create_battle_fixture()
+	var inventory := fixture.get("inventory") as Inventory
+	var battle := fixture.get("battle") as BattleController
+	if inventory == null or battle == null:
+		_fail("Fixture incompleta nel test cooldown Battle.")
+		await _cleanup_battle_fixture(fixture)
+		return
+	var player_astral := battle.get_player_astral()
+	var wild_astral := battle.get_wild_astral()
+	if player_astral == null or wild_astral == null:
+		_fail("Astral mancanti nel test cooldown Battle.")
+		await _cleanup_battle_fixture(fixture)
+		return
+
+	var player_identity := ASTRAL_PRESENTATION.format_identity(player_astral)
+	var wild_identity := ASTRAL_PRESENTATION.format_identity(wild_astral)
+	_expect(
+		player_identity in battle.player_name_label.text,
+		"Lo status Battle non mostra nome, sesso ed elemento dell'alleato."
+	)
+	_expect(
+		wild_identity in battle.wild_name_label.text,
+		"Lo status Battle non mostra nome, sesso ed elemento del selvatico."
+	)
+
+	battle.choose_fight()
+	_expect(
+		battle.get_state() == BattleController.BattleState.MOVES,
+		"Il test cooldown non raggiunge MOVES."
+	)
+	var cooldown_indices: Dictionary[int, int] = {}
+	for child: Node in battle.moves_grid.get_children():
+		var move_button := child as Button
+		if move_button == null or not move_button.has_meta(&"move_index"):
+			continue
+		var move_index := int(move_button.get_meta(&"move_index"))
+		var base_cooldown := int(move_button.get_meta(&"cooldown_turns", -1))
+		cooldown_indices[base_cooldown] = move_index
+		_expect(
+			"CD %d" % base_cooldown in move_button.text,
+			"Il pulsante mossa non mostra il cooldown base %d." % base_cooldown
+		)
+		_expect(
+			int(move_button.get_meta(&"cooldown_remaining", -1)) == 0,
+			"Una mossa parte gia in cooldown."
+		)
+	_expect(
+		cooldown_indices.size() == 4
+		and cooldown_indices.has(0)
+		and cooldown_indices.has(1)
+		and cooldown_indices.has(2)
+		and cooldown_indices.has(3),
+		"Battle non espone una mossa per ciascun cooldown da 0 a 3."
+	)
+	if not cooldown_indices.has(3) or not cooldown_indices.has(0):
+		await _cleanup_battle_fixture(fixture)
+		return
+
+	var cooldown_three_index := cooldown_indices[3]
+	var cooldown_zero_index := cooldown_indices[0]
+	player_astral.current_health = 999
+	battle.choose_move(cooldown_three_index)
+	_expect(
+		battle.get_player_turn_index() == 2,
+		"Usare una mossa CD3 non consuma esattamente un turno alleato."
+	)
+	_expect(
+		battle.get_player_move_cooldown_remaining(cooldown_three_index) == 3,
+		"La mossa CD3 non entra in attesa per tre turni."
+	)
+	var command_restored := await _wait_for_battle_state(
+		battle,
+		BattleController.BattleState.COMMAND
+	)
+	_expect(command_restored, "La mossa CD3 non restituisce i comandi.")
+
+	battle.choose_fight()
+	var locked_button := _find_battle_move_button(battle, cooldown_three_index)
+	_expect(locked_button != null, "Il pulsante CD3 scompare durante l'attesa.")
+	if locked_button != null:
+		_expect(locked_button.disabled, "Una mossa in cooldown resta selezionabile.")
+		_expect(
+			int(locked_button.get_meta(&"cooldown_remaining", -1)) == 3
+			and "Attesa 3" in locked_button.text,
+			"Il pulsante CD3 non mostra il contatore iniziale."
+		)
+	var turn_before_locked_call := battle.get_player_turn_index()
+	var player_health_before_locked_call := player_astral.current_health
+	var wild_health_before_locked_call := wild_astral.current_health
+	battle.choose_move(cooldown_three_index)
+	_expect(
+		battle.get_state() == BattleController.BattleState.MOVES,
+		"Una chiamata a una mossa bloccata esce da MOVES."
+	)
+	_expect(
+		battle.get_player_turn_index() == turn_before_locked_call,
+		"Una mossa bloccata consuma il turno alleato."
+	)
+	_expect(
+		player_astral.current_health == player_health_before_locked_call
+		and wild_astral.current_health == wild_health_before_locked_call,
+		"Una mossa bloccata modifica gli HP."
+	)
+	battle.call("_show_commands")
+
+	inventory.add_item(&"bacca", 3)
+	var expected_remaining_values: Array[int] = [2, 1, 0]
+	for expected_remaining: int in expected_remaining_values:
+		battle.choose_items()
+		_expect(
+			battle.get_state() == BattleController.BattleState.ITEMS,
+			"Un turno valido di ricarica non raggiunge ITEMS."
+		)
+		battle.use_item(&"bacca")
+		command_restored = await _wait_for_battle_state(
+			battle,
+			BattleController.BattleState.COMMAND
+		)
+		_expect(command_restored, "Un turno valido non restituisce i comandi.")
+		_expect(
+			battle.get_player_move_cooldown_remaining(cooldown_three_index)
+			== expected_remaining,
+			"Il contatore CD3 non scende a %d dopo un turno valido."
+			% expected_remaining
+		)
+	_expect(
+		battle.get_player_turn_index() == 5,
+		"La mossa CD3 non torna pronta al quarto turno successivo."
+	)
+
+	battle.choose_fight()
+	var ready_button := _find_battle_move_button(battle, cooldown_three_index)
+	_expect(ready_button != null, "Il pulsante CD3 pronto non viene ricreato.")
+	if ready_button != null:
+		_expect(not ready_button.disabled, "La mossa CD3 resta bloccata al turno 5.")
+		_expect(
+			int(ready_button.get_meta(&"cooldown_remaining", -1)) == 0,
+			"Il contatore CD3 pronto non torna a zero."
+		)
+	battle.choose_move(cooldown_zero_index)
+	command_restored = await _wait_for_battle_state(
+		battle,
+		BattleController.BattleState.COMMAND
+	)
+	_expect(command_restored, "La mossa CD0 non conclude il turno normalmente.")
+	_expect(
+		battle.get_player_move_cooldown_remaining(cooldown_zero_index) == 0,
+		"Una mossa CD0 entra impropriamente in cooldown."
+	)
+	battle.choose_fight()
+	var zero_button := _find_battle_move_button(battle, cooldown_zero_index)
+	_expect(
+		zero_button != null and not zero_button.disabled,
+		"La mossa CD0 non resta disponibile nel turno successivo."
+	)
 	await _cleanup_battle_fixture(fixture)
 
 
@@ -977,13 +1751,15 @@ func _test_battle_capture() -> void:
 		await _cleanup_battle_fixture(fixture)
 		return
 	var player_astral: AstralInstance = battle.get_player_astral()
-	if player_astral == null:
-		_fail("Astral alleato mancante nel test Cattura.")
+	var wild_astral: AstralInstance = battle.get_wild_astral()
+	if player_astral == null or wild_astral == null:
+		_fail("Astral alleato o selvatico mancante nel test Cattura.")
 		await _cleanup_battle_fixture(fixture)
 		return
 
 	var initial_roster_count := roster.get_astral_count()
 	var initial_experience := player_astral.experience
+	var wild_sex := wild_astral.sex
 	battle.choose_capture()
 	var battle_finished := await _wait_for_battle_state(
 		battle,
@@ -1000,6 +1776,10 @@ func _test_battle_capture() -> void:
 		_expect(
 			roster.get_astral(initial_roster_count) == _captured_astral,
 			"L'Astral restituito non coincide con quello aggiunto al roster."
+		)
+		_expect(
+			_captured_astral.sex == wild_sex,
+			"Catturare un selvatico non conserva il suo sesso."
 		)
 	_expect(
 		player_astral.experience == initial_experience,
@@ -1394,6 +2174,29 @@ func _find_first_node_of_type(root_node: Node, type_name: String) -> Node:
 	if nodes.is_empty():
 		return null
 	return nodes.front()
+
+
+func _test_grimoire_profile_inputs() -> void:
+	var bindings: Dictionary[StringName, int] = {
+		&"toggle_grimoire": KEY_O,
+		&"toggle_player_profile": KEY_P,
+	}
+	for action_name: StringName in bindings:
+		_expect(
+			InputMap.has_action(action_name),
+			"Input action mancante: %s." % action_name
+		)
+		var expected_key: int = bindings[action_name]
+		var has_expected_key := false
+		for event: InputEvent in InputMap.action_get_events(action_name):
+			var key_event := event as InputEventKey
+			if key_event != null and key_event.physical_keycode == expected_key:
+				has_expected_key = true
+				break
+		_expect(
+			has_expected_key,
+			"%s non usa il tasto fisico richiesto." % action_name
+		)
 
 
 func _expect(condition: bool, message: String) -> void:

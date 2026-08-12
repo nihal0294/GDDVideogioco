@@ -9,3 +9,4 @@ display_name = "Frusta di Liane"
 description = "Liane flessibili colpiscono rapidamente il bersaglio."
 power = 8
 element_id = &"natura"
+cooldown_turns = 1

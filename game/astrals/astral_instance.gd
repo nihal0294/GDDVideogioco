@@ -5,13 +5,20 @@ signal experience_changed(current_experience: int, required_experience: int)
 signal leveled_up(previous_level: int, new_level: int)
 signal moves_changed()
 
+enum Sex {
+	MALE,
+	FEMALE,
+}
+
 const EXPERIENCE_PER_LEVEL: int = 100
 const MAX_MOVE_COUNT: int = 4
+const MAX_LEVEL: int = 999
 
 @export var definition: AstralDefinition
 @export_range(1, 999, 1) var level: int = 1
 @export var current_health: int = 0
 @export_range(0, 9999999, 1) var experience: int = 0
+@export_enum("Maschio", "Femmina") var sex: int = Sex.MALE
 
 @export_storage var _moves: Array[AstralMoveDefinition] = []
 
@@ -20,15 +27,35 @@ var moves: Array[AstralMoveDefinition]:
 		return _copy_limited_moves(_moves)
 
 
-func setup(source_definition: AstralDefinition, source_level: int = 1) -> void:
+func setup(
+	source_definition: AstralDefinition,
+	source_level: int = 1,
+	forced_sex: int = -1
+) -> void:
 	definition = source_definition
 	level = maxi(source_level, 1)
 	experience = 0
+	sex = (
+		forced_sex
+		if forced_sex == Sex.MALE or forced_sex == Sex.FEMALE
+		else sex_from_roll(randf())
+	)
 	var starting_moves: Array[AstralMoveDefinition] = []
 	if definition != null:
 		starting_moves.assign(definition.starting_moves)
 	_moves = _copy_limited_moves(starting_moves)
 	reset_health()
+
+
+func setup_with_random(
+	source_definition: AstralDefinition,
+	source_level: int,
+	random: RandomNumberGenerator
+) -> void:
+	var generated_sex := -1
+	if random != null:
+		generated_sex = sex_from_roll(random.randf())
+	setup(source_definition, source_level, generated_sex)
 
 
 func reset_health() -> void:
@@ -122,6 +149,7 @@ func duplicate_runtime() -> AstralInstance:
 	var runtime_copy := AstralInstance.new()
 	runtime_copy.definition = definition
 	runtime_copy.level = maxi(level, 1)
+	runtime_copy.sex = sex
 	runtime_copy.current_health = clampi(
 		current_health,
 		0,
@@ -130,6 +158,89 @@ func duplicate_runtime() -> AstralInstance:
 	runtime_copy.experience = maxi(experience, 0)
 	runtime_copy._moves = runtime_copy._copy_limited_moves(_moves)
 	return runtime_copy
+
+
+func get_save_data() -> Dictionary:
+	var move_ids: Array[String] = []
+	for move: AstralMoveDefinition in _moves:
+		if move != null:
+			move_ids.append(String(move.move_id))
+	return {
+		"astral_id": String(definition.astral_id) if definition != null else "",
+		"level": level,
+		"current_health": current_health,
+		"experience": experience,
+		"sex": sex,
+		"move_ids": move_ids,
+	}
+
+
+func load_save_data(
+	data: Dictionary,
+	source_definition: AstralDefinition,
+	move_definitions: Dictionary[StringName, AstralMoveDefinition]
+) -> bool:
+	if source_definition == null:
+		return false
+	var saved_astral_id := _string_name_from_variant(
+		data.get("astral_id", &"")
+	)
+	if (
+		not saved_astral_id.is_empty()
+		and saved_astral_id != source_definition.astral_id
+	):
+		return false
+
+	var saved_sex := _validated_int(
+		data.get("sex", Sex.MALE),
+		Sex.MALE
+	)
+	if saved_sex != Sex.MALE and saved_sex != Sex.FEMALE:
+		saved_sex = Sex.MALE
+	setup(
+		source_definition,
+		clampi(
+			_validated_int(data.get("level", 1), 1),
+			1,
+			MAX_LEVEL
+		),
+		saved_sex
+	)
+	current_health = clampi(
+		_validated_int(
+			data.get("current_health", source_definition.max_health),
+			source_definition.max_health
+		),
+		0,
+		source_definition.max_health
+	)
+	experience = clampi(
+		_validated_int(data.get("experience", 0), 0),
+		0,
+		EXPERIENCE_PER_LEVEL - 1
+	)
+
+	var raw_moves: Variant = data.get("move_ids", null)
+	if raw_moves is Array:
+		var loaded_moves: Array[AstralMoveDefinition] = []
+		for raw_move_id: Variant in raw_moves:
+			var move_id := _string_name_from_variant(raw_move_id)
+			if move_id.is_empty():
+				continue
+			var move := move_definitions.get(move_id) as AstralMoveDefinition
+			if move == null or _contains_move(loaded_moves, move):
+				continue
+			loaded_moves.append(move)
+			if loaded_moves.size() >= MAX_MOVE_COUNT:
+				break
+		if not loaded_moves.is_empty():
+			_moves.assign(loaded_moves)
+			moves_changed.emit()
+	return true
+
+
+static func sex_from_roll(roll: float) -> int:
+	return Sex.MALE if roll < 0.5 else Sex.FEMALE
 
 
 func _copy_limited_moves(
@@ -167,3 +278,17 @@ func _contains_move(
 
 func _is_valid_move_index(index: int) -> bool:
 	return index >= 0 and index < _moves.size()
+
+
+static func _validated_int(value: Variant, fallback: int) -> int:
+	if value is int:
+		return int(value)
+	if value is float and is_finite(float(value)):
+		return int(value)
+	return fallback
+
+
+static func _string_name_from_variant(value: Variant) -> StringName:
+	if value is String or value is StringName:
+		return StringName(value)
+	return &""

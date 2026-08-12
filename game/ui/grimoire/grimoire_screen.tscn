@@ -1,0 +1,254 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://game/ui/grimoire/grimoire_screen.gd" id="1_screen"]
+
+[sub_resource type="StyleBoxFlat" id="Style_panel"]
+bg_color = Color(0.055, 0.075, 0.11, 0.97)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.36, 0.3, 0.18, 0.9)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="GrimoireScreen" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+script = ExtResource("1_screen")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.035, 0.026, 0.018, 0.985)
+
+[node name="OuterMargin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 36
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 36
+theme_override_constants/margin_bottom = 22
+
+[node name="Layout" type="VBoxContainer" parent="OuterMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Header" type="HBoxContainer" parent="OuterMargin/Layout"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="OuterMargin/Layout/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.82, 0.52, 1)
+theme_override_font_sizes/font_size = 36
+text = "Grimorio degli Astral"
+
+[node name="HeaderSpacer" type="Control" parent="OuterMargin/Layout/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ProgressLabel" type="Label" parent="OuterMargin/Layout/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.66, 0.53, 1)
+theme_override_font_sizes/font_size = 17
+text = "Visti 0/0    •    Catturati 0/0"
+vertical_alignment = 1
+
+[node name="Content" type="HSplitContainer" parent="OuterMargin/Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+split_offset = 370
+dragger_visibility = 1
+
+[node name="IndexPanel" type="PanelContainer" parent="OuterMargin/Layout/Content"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_panel")
+
+[node name="IndexMargin" type="MarginContainer" parent="OuterMargin/Layout/Content/IndexPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="IndexLayout" type="VBoxContainer" parent="OuterMargin/Layout/Content/IndexPanel/IndexMargin"]
+layout_mode = 2
+theme_override_constants/separation = 9
+
+[node name="IndexTitle" type="Label" parent="OuterMargin/Layout/Content/IndexPanel/IndexMargin/IndexLayout"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 21
+text = "Indice delle specie"
+
+[node name="IndexHint" type="Label" parent="OuterMargin/Layout/Content/IndexPanel/IndexMargin/IndexLayout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.58, 0.5, 1)
+text = "◐ avvistato    ★ catturato"
+
+[node name="EntryList" type="ItemList" parent="OuterMargin/Layout/Content/IndexPanel/IndexMargin/IndexLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 18
+allow_reselect = true
+
+[node name="DetailsPanel" type="PanelContainer" parent="OuterMargin/Layout/Content"]
+custom_minimum_size = Vector2(650, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("Style_panel")
+
+[node name="DetailsMargin" type="MarginContainer" parent="OuterMargin/Layout/Content/DetailsPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 22
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 22
+theme_override_constants/margin_bottom = 16
+
+[node name="Details" type="VBoxContainer" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Identity" type="HBoxContainer" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="PortraitColor" type="ColorRect" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(116, 116)
+layout_mode = 2
+color = Color(0.06, 0.075, 0.095, 1)
+
+[node name="IdentityText" type="VBoxContainer" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="EntryNumber" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity/IdentityText"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.66, 0.6, 0.48, 1)
+text = "Voce n. ---"
+
+[node name="AstralName" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity/IdentityText"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+text = "Specie"
+
+[node name="DiscoveryStatus" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity/IdentityText"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.94, 0.73, 0.32, 1)
+text = "NON SCOPERTO"
+
+[node name="Facts" type="GridContainer" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+layout_mode = 2
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 8
+columns = 2
+
+[node name="ElementsLabel" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Facts"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.6, 0.51, 1)
+text = "Elemento"
+[node name="ElementsValue" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Facts"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "—"
+[node name="SpawnLabel" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Facts"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.6, 0.51, 1)
+text = "Zona di incontro"
+[node name="SpawnValue" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Facts"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "—"
+[node name="HabitatLabel" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Facts"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.6, 0.51, 1)
+text = "Habitat"
+[node name="HabitatValue" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Facts"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "—"
+[node name="StatsLabel" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Facts"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.6, 0.51, 1)
+text = "Statistiche base"
+[node name="StatsValue" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Facts"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "—"
+
+[node name="Separator" type="HSeparator" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+layout_mode = 2
+
+[node name="DescriptionTitle" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 19
+text = "Descrizione"
+[node name="DescriptionValue" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+autowrap_mode = 2
+text = "—"
+[node name="NotesTitle" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 19
+text = "Note di campo"
+[node name="FieldNotesValue" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+autowrap_mode = 2
+text = "—"
+[node name="MovesTitle" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 19
+text = "Mosse note"
+[node name="MovesValue" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 2
+text = "—"
+[node name="CardsValue" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.55, 0.52, 0.47, 1)
+text = "Animazione 3D bloccata"
+vertical_alignment = 2
+
+[node name="Footer" type="HBoxContainer" parent="OuterMargin/Layout"]
+layout_mode = 2
+[node name="InputHint" type="Label" parent="OuterMargin/Layout/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.62, 0.58, 0.5, 1)
+text = "O: chiudi    •    Frecce: consulta"
+[node name="CloseButton" type="Button" parent="OuterMargin/Layout/Footer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(130, 44)
+layout_mode = 2
+text = "Chiudi"

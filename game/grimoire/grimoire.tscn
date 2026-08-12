@@ -1,0 +1,12 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://game/grimoire/grimoire.gd" id="1_grimoire"]
+[ext_resource type="Resource" path="res://data/grimoire/001_astral_alleato.tres" id="2_entry"]
+[ext_resource type="Resource" path="res://data/grimoire/002_wyrm_di_lava.tres" id="3_entry"]
+[ext_resource type="Resource" path="res://data/grimoire/003_topo_onda.tres" id="4_entry"]
+[ext_resource type="Resource" path="res://data/grimoire/004_orso_fatato.tres" id="5_entry"]
+[ext_resource type="Resource" path="res://data/grimoire/005_slime_arcobaleno.tres" id="6_entry"]
+
+[node name="Grimoire" type="Node"]
+script = ExtResource("1_grimoire")
+catalog = [ExtResource("2_entry"), ExtResource("3_entry"), ExtResource("4_entry"), ExtResource("5_entry"), ExtResource("6_entry")]

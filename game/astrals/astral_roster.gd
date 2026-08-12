@@ -11,6 +11,31 @@ signal active_astral_changed(astral: AstralInstance)
 
 var _astrals: Array[AstralInstance] = []
 
+const ASTRAL_DEFINITION_PATHS: Array[String] = [
+	"res://data/astrals/player_placeholder.tres",
+	"res://data/astrals/wyrm_di_lava.tres",
+	"res://data/astrals/topo_onda.tres",
+	"res://data/astrals/orso_fatato.tres",
+	"res://data/astrals/slime_arcobaleno.tres",
+	"res://data/astrals/wild_placeholder.tres",
+]
+
+const MOVE_DEFINITION_PATHS: Array[String] = [
+	"res://data/moves/impatto_astrale.tres",
+	"res://data/moves/frusta_di_liane.tres",
+	"res://data/moves/lamafoglia.tres",
+	"res://data/moves/assalto_radice.tres",
+	"res://data/moves/scintilla.tres",
+	"res://data/moves/fiammata.tres",
+	"res://data/moves/carica_rovente.tres",
+	"res://data/moves/spruzzo.tres",
+	"res://data/moves/onda_crescente.tres",
+	"res://data/moves/marea_impetuosa.tres",
+	"res://data/moves/colpo_rapido.tres",
+	"res://data/moves/urto_possente.tres",
+	"res://data/moves/esplosione_astrale.tres",
+]
+
 
 func _ready() -> void:
 	if starter == null or not _astrals.is_empty():
@@ -108,6 +133,65 @@ func capture_astral(instance: AstralInstance) -> bool:
 		active_astral_changed.emit(get_active_astral())
 	roster_changed.emit()
 	return true
+
+
+func get_save_data() -> Array[Dictionary]:
+	var saved_astrals: Array[Dictionary] = []
+	for astral: AstralInstance in _astrals:
+		if astral != null and astral.definition != null:
+			saved_astrals.append(astral.get_save_data())
+	return saved_astrals
+
+
+func load_save_data(data: Array) -> bool:
+	var loaded_astrals: Array[AstralInstance] = []
+	var astral_definitions := _load_astral_definitions()
+	var move_definitions := _load_move_definitions()
+	for raw_astral: Variant in data:
+		if not (raw_astral is Dictionary):
+			continue
+		var astral_data := raw_astral as Dictionary
+		var raw_astral_id: Variant = astral_data.get("astral_id", "")
+		if not (raw_astral_id is String or raw_astral_id is StringName):
+			continue
+		var astral_id := StringName(raw_astral_id)
+		var definition := astral_definitions.get(astral_id) as AstralDefinition
+		if definition == null:
+			continue
+		var instance := AstralInstance.new()
+		if not instance.load_save_data(
+			astral_data,
+			definition,
+			move_definitions
+		):
+			continue
+		loaded_astrals.append(instance)
+	if loaded_astrals.is_empty():
+		return false
+	var previous_active := get_active_astral()
+	_astrals.assign(loaded_astrals)
+	if get_active_astral() != previous_active:
+		active_astral_changed.emit(get_active_astral())
+	roster_changed.emit()
+	return true
+
+
+func _load_astral_definitions() -> Dictionary[StringName, AstralDefinition]:
+	var definitions: Dictionary[StringName, AstralDefinition] = {}
+	for path: String in ASTRAL_DEFINITION_PATHS:
+		var definition := load(path) as AstralDefinition
+		if definition != null and not definition.astral_id.is_empty():
+			definitions[definition.astral_id] = definition
+	return definitions
+
+
+func _load_move_definitions() -> Dictionary[StringName, AstralMoveDefinition]:
+	var definitions: Dictionary[StringName, AstralMoveDefinition] = {}
+	for path: String in MOVE_DEFINITION_PATHS:
+		var definition := load(path) as AstralMoveDefinition
+		if definition != null and not definition.move_id.is_empty():
+			definitions[definition.move_id] = definition
+	return definitions
 
 
 func _is_valid_index(index: int) -> bool:

@@ -9,3 +9,4 @@ display_name = "Fiammata"
 description = "Una fiammata concentrata investe il bersaglio."
 power = 10
 element_id = &"fuoco"
+cooldown_turns = 2

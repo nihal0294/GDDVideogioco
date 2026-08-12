@@ -1,0 +1,239 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://game/ui/player_profile/player_profile_screen.gd" id="1_screen"]
+
+[sub_resource type="StyleBoxFlat" id="Style_panel"]
+bg_color = Color(0.055, 0.075, 0.11, 0.97)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.22, 0.4, 0.5, 0.9)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="Environment" id="Environment_preview"]
+background_mode = 1
+background_color = Color(0.035, 0.055, 0.08, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.55, 0.7, 0.8, 1)
+ambient_light_energy = 0.8
+
+[sub_resource type="StandardMaterial3D" id="Material_player"]
+albedo_color = Color(0.12, 0.68, 0.72, 1)
+metallic = 0.15
+roughness = 0.48
+
+[sub_resource type="CapsuleMesh" id="Capsule_player"]
+material = SubResource("Material_player")
+radius = 0.7
+height = 2.8
+radial_segments = 32
+rings = 12
+
+[sub_resource type="StandardMaterial3D" id="Material_marker"]
+albedo_color = Color(1, 0.74, 0.16, 1)
+roughness = 0.4
+
+[sub_resource type="BoxMesh" id="Mesh_marker"]
+material = SubResource("Material_marker")
+size = Vector3(0.35, 0.38, 0.25)
+
+[node name="PlayerProfileScreen" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+script = ExtResource("1_screen")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.018, 0.03, 0.05, 0.985)
+
+[node name="OuterMargin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 22
+
+[node name="Layout" type="VBoxContainer" parent="OuterMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Header" type="HBoxContainer" parent="OuterMargin/Layout"]
+layout_mode = 2
+[node name="Title" type="Label" parent="OuterMargin/Layout/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.82, 0.94, 1, 1)
+theme_override_font_sizes/font_size = 36
+text = "Profilo del Domatore"
+[node name="HeaderSpacer" type="Control" parent="OuterMargin/Layout/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+[node name="InputHint" type="Label" parent="OuterMargin/Layout/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.58, 0.7, 0.8, 1)
+text = "P: chiudi"
+vertical_alignment = 1
+
+[node name="Content" type="HBoxContainer" parent="OuterMargin/Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 18
+
+[node name="PortraitPanel" type="PanelContainer" parent="OuterMargin/Layout/Content"]
+custom_minimum_size = Vector2(390, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_panel")
+[node name="PortraitMargin" type="MarginContainer" parent="OuterMargin/Layout/Content/PortraitPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+[node name="PortraitLayout" type="VBoxContainer" parent="OuterMargin/Layout/Content/PortraitPanel/PortraitMargin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+[node name="PortraitTitle" type="Label" parent="OuterMargin/Layout/Content/PortraitPanel/PortraitMargin/PortraitLayout"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 21
+text = "Personaggio selezionato"
+horizontal_alignment = 1
+[node name="Preview" type="SubViewportContainer" parent="OuterMargin/Layout/Content/PortraitPanel/PortraitMargin/PortraitLayout"]
+custom_minimum_size = Vector2(350, 480)
+layout_mode = 2
+size_flags_vertical = 3
+stretch = true
+[node name="SubViewport" type="SubViewport" parent="OuterMargin/Layout/Content/PortraitPanel/PortraitMargin/PortraitLayout/Preview"]
+own_world_3d = true
+size = Vector2i(350, 480)
+render_target_update_mode = 2
+[node name="WorldEnvironment" type="WorldEnvironment" parent="OuterMargin/Layout/Content/PortraitPanel/PortraitMargin/PortraitLayout/Preview/SubViewport"]
+environment = SubResource("Environment_preview")
+[node name="KeyLight" type="DirectionalLight3D" parent="OuterMargin/Layout/Content/PortraitPanel/PortraitMargin/PortraitLayout/Preview/SubViewport"]
+rotation = Vector3(-0.65, -0.55, 0)
+light_color = Color(1, 0.9, 0.72, 1)
+light_energy = 1.35
+shadow_enabled = true
+[node name="PlayerPreview" type="Node3D" parent="OuterMargin/Layout/Content/PortraitPanel/PortraitMargin/PortraitLayout/Preview/SubViewport"]
+[node name="Body" type="MeshInstance3D" parent="OuterMargin/Layout/Content/PortraitPanel/PortraitMargin/PortraitLayout/Preview/SubViewport/PlayerPreview"]
+mesh = SubResource("Capsule_player")
+[node name="FacingMarker" type="MeshInstance3D" parent="OuterMargin/Layout/Content/PortraitPanel/PortraitMargin/PortraitLayout/Preview/SubViewport/PlayerPreview"]
+position = Vector3(0, 0.15, 0.69)
+mesh = SubResource("Mesh_marker")
+[node name="Camera3D" type="Camera3D" parent="OuterMargin/Layout/Content/PortraitPanel/PortraitMargin/PortraitLayout/Preview/SubViewport"]
+position = Vector3(0, 0.1, 5.2)
+current = true
+fov = 42.0
+[node name="PlaceholderHint" type="Label" parent="OuterMargin/Layout/Content/PortraitPanel/PortraitMargin/PortraitLayout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.62, 0.7, 1)
+text = "Modello provvisorio"
+horizontal_alignment = 1
+
+[node name="ProfilePanel" type="PanelContainer" parent="OuterMargin/Layout/Content"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("Style_panel")
+[node name="ProfileMargin" type="MarginContainer" parent="OuterMargin/Layout/Content/ProfilePanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 18
+[node name="ProfileLayout" type="VBoxContainer" parent="OuterMargin/Layout/Content/ProfilePanel/ProfileMargin"]
+layout_mode = 2
+theme_override_constants/separation = 11
+[node name="PlayerNameValue" type="Label" parent="OuterMargin/Layout/Content/ProfilePanel/ProfileMargin/ProfileLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.96, 1, 1)
+theme_override_font_sizes/font_size = 30
+text = "Avventuriero"
+[node name="StatsGrid" type="GridContainer" parent="OuterMargin/Layout/Content/ProfilePanel/ProfileMargin/ProfileLayout"]
+layout_mode = 2
+theme_override_constants/h_separation = 18
+theme_override_constants/v_separation = 9
+columns = 2
+[node name="CurrencyLabel" type="Label" parent="OuterMargin/Layout/Content/ProfilePanel/ProfileMargin/ProfileLayout/StatsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.56, 0.7, 0.78, 1)
+text = "Patrimonio"
+[node name="CurrencyValue" type="Label" parent="OuterMargin/Layout/Content/ProfilePanel/ProfileMargin/ProfileLayout/StatsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "0 Fiorini"
+[node name="CapturedLabel" type="Label" parent="OuterMargin/Layout/Content/ProfilePanel/ProfileMargin/ProfileLayout/StatsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.56, 0.7, 0.78, 1)
+text = "Astral catturati"
+[node name="CapturedValue" type="Label" parent="OuterMargin/Layout/Content/ProfilePanel/ProfileMargin/ProfileLayout/StatsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "0"
+[node name="MedalsLabel" type="Label" parent="OuterMargin/Layout/Content/ProfilePanel/ProfileMargin/ProfileLayout/StatsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.56, 0.7, 0.78, 1)
+text = "Medaglie"
+[node name="MedalsSummary" type="Label" parent="OuterMargin/Layout/Content/ProfilePanel/ProfileMargin/ProfileLayout/StatsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "0 / 8"
+[node name="SeparatorOne" type="HSeparator" parent="OuterMargin/Layout/Content/ProfilePanel/ProfileMargin/ProfileLayout"]
+layout_mode = 2
+[node name="MedalTitle" type="Label" parent="OuterMargin/Layout/Content/ProfilePanel/ProfileMargin/ProfileLayout"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 21
+text = "Medagliere"
+[node name="MedalGrid" type="GridContainer" parent="OuterMargin/Layout/Content/ProfilePanel/ProfileMargin/ProfileLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 10
+columns = 4
+[node name="SeparatorTwo" type="HSeparator" parent="OuterMargin/Layout/Content/ProfilePanel/ProfileMargin/ProfileLayout"]
+layout_mode = 2
+[node name="SummaryTitle" type="Label" parent="OuterMargin/Layout/Content/ProfilePanel/ProfileMargin/ProfileLayout"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 21
+text = "Riepilogo dell'avventura"
+[node name="AdventureSummary" type="Label" parent="OuterMargin/Layout/Content/ProfilePanel/ProfileMargin/ProfileLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.72, 0.79, 0.85, 1)
+theme_override_font_sizes/font_size = 17
+text = "L'avventura è appena cominciata."
+autowrap_mode = 2
+
+[node name="Footer" type="HBoxContainer" parent="OuterMargin/Layout"]
+layout_mode = 2
+[node name="FooterSpacer" type="Control" parent="OuterMargin/Layout/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+[node name="CloseButton" type="Button" parent="OuterMargin/Layout/Footer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(130, 44)
+layout_mode = 2
+text = "Chiudi"

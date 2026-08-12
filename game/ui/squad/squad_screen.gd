@@ -3,6 +3,8 @@ extends Control
 
 signal close_requested
 
+const PRESENTATION := preload("res://game/astrals/astral_presentation.gd")
+
 @onready var astral_list: ItemList = %AstralList
 @onready var astral_color: ColorRect = %AstralColor
 @onready var astral_name: Label = %AstralName
@@ -117,7 +119,7 @@ func _refresh_roster() -> void:
 		var display_name := "Astral senza nome"
 		var maximum_health := 0
 		if definition != null:
-			display_name = definition.display_name
+			display_name = PRESENTATION.format_identity(astral)
 			maximum_health = _get_maximum_health(astral, definition)
 		var lead_marker := "★ " if index == 0 else ""
 		var item_index := astral_list.add_item(
@@ -255,7 +257,7 @@ func _show_astral_details(astral: AstralInstance, roster_index: int) -> void:
 		_clear_details()
 		return
 
-	astral_name.text = definition.display_name
+	astral_name.text = PRESENTATION.format_identity(astral)
 	description_label.text = (
 		definition.description
 		if not definition.description.strip_edges().is_empty()
@@ -425,36 +427,33 @@ func _format_move(move: Variant) -> String:
 			[&"power", &"attack_power"],
 			null
 		)
+		var cooldown: Variant = _get_property_value(
+			move_object,
+			[&"cooldown_turns"],
+			0
+		)
+		var element: Variant = _get_property_value(
+			move_object,
+			[&"element_id"],
+			&"neutro"
+		)
 		if power != null:
-			return "%s    Potenza %s" % [str(move_name), str(power)]
+			return "%s    Potenza %s    CD %d    %s" % [
+				str(move_name),
+				str(power),
+				int(cooldown),
+				PRESENTATION.get_element_symbol(StringName(element)),
+			]
 		return str(move_name)
 	return str(move)
 
 
 func _format_elements(definition: AstralDefinition) -> String:
-	var raw_elements: Variant = _get_property_value(
-		definition,
-		[&"elements", &"element_types"],
-		null
-	)
 	var element_names: Array[String] = []
-	if raw_elements is Array:
-		for element: Variant in raw_elements:
-			var element_name := _format_named_value(element)
-			if not element_name.is_empty():
-				element_names.append(element_name)
-	else:
-		for property_name: StringName in [&"primary_element", &"secondary_element", &"element"]:
-			var element: Variant = _get_property_value(
-				definition,
-				[property_name],
-				null
-			)
-			var element_name := _format_named_value(element)
-			if not element_name.is_empty() and element_name not in element_names:
-				element_names.append(element_name)
+	for element_id: StringName in definition.get_elements():
+		element_names.append(PRESENTATION.format_element(element_id))
 	if element_names.is_empty():
-		return "—"
+		return PRESENTATION.format_element(&"neutro")
 	return " / ".join(element_names)
 
 

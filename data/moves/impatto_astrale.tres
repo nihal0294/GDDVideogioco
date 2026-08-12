@@ -9,3 +9,4 @@ display_name = "Impatto Astrale"
 description = "Un urto diretto caricato con energia astrale."
 power = 6
 element_id = &"neutro"
+cooldown_turns = 0

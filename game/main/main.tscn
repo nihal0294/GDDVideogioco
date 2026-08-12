@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://dvm5wnytkfnen"]
+[gd_scene load_steps=11 format=3 uid="uid://dvm5wnytkfnen"]
 
 [ext_resource type="PackedScene" path="res://game/player/player.tscn" id="1_player"]
 [ext_resource type="PackedScene" path="res://game/world/maps/verdant_valley/verdant_valley.tscn" id="2_world_map"]
@@ -6,6 +6,9 @@
 [ext_resource type="PackedScene" path="res://game/inventory/inventory.tscn" id="4_inventory"]
 [ext_resource type="PackedScene" path="res://game/ui/game_ui.tscn" id="5_game_ui"]
 [ext_resource type="PackedScene" path="res://game/astrals/astral_roster.tscn" id="6_astral_roster"]
+[ext_resource type="PackedScene" path="res://game/grimoire/grimoire.tscn" id="7_grimoire"]
+[ext_resource type="PackedScene" path="res://game/player/player_profile.tscn" id="8_profile"]
+[ext_resource type="PackedScene" path="res://game/save/save_manager.tscn" id="9_save_manager"]
 
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
@@ -37,6 +40,12 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 0)
 [node name="Inventory" parent="." instance=ExtResource("4_inventory")]
 
 [node name="AstralRoster" parent="." instance=ExtResource("6_astral_roster")]
+
+[node name="Grimoire" parent="." instance=ExtResource("7_grimoire")]
+
+[node name="PlayerProfile" parent="." instance=ExtResource("8_profile")]
+
+[node name="SaveManager" parent="." instance=ExtResource("9_save_manager")]
 
 [node name="BattleHost" type="Node" parent="."]
 

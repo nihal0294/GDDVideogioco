@@ -9,3 +9,4 @@ display_name = "Lamafoglia"
 description = "Una foglia affilata attraversa l'aria come una lama."
 power = 10
 element_id = &"natura"
+cooldown_turns = 2

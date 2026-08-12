@@ -9,3 +9,4 @@ display_name = "Carica Rovente"
 description = "L'Astral si avvolge nelle fiamme e travolge l'avversario."
 power = 12
 element_id = &"fuoco"
+cooldown_turns = 3

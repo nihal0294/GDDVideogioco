@@ -1,0 +1,227 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://game/ui/options/options_screen.gd" id="1_options"]
+
+[sub_resource type="StyleBoxFlat" id="Style_panel"]
+bg_color = Color(0.055, 0.075, 0.11, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.25, 0.45, 0.62, 0.85)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="OptionsScreen" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+script = ExtResource("1_options")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.018, 0.03, 0.05, 0.985)
+
+[node name="OuterMargin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 42
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 42
+theme_override_constants/margin_bottom = 26
+
+[node name="Layout" type="VBoxContainer" parent="OuterMargin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Header" type="HBoxContainer" parent="OuterMargin/Layout"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="OuterMargin/Layout/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.84, 0.94, 1, 1)
+theme_override_font_sizes/font_size = 36
+text = "Opzioni"
+
+[node name="HeaderSpacer" type="Control" parent="OuterMargin/Layout/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HeaderHint" type="Label" parent="OuterMargin/Layout/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.58, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 16
+text = "Seleziona una categoria"
+vertical_alignment = 1
+
+[node name="Content" type="HSplitContainer" parent="OuterMargin/Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+split_offset = 370
+dragger_visibility = 1
+
+[node name="CategoriesPanel" type="PanelContainer" parent="OuterMargin/Layout/Content"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_panel")
+
+[node name="CategoriesMargin" type="MarginContainer" parent="OuterMargin/Layout/Content/CategoriesPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 18
+
+[node name="Categories" type="VBoxContainer" parent="OuterMargin/Layout/Content/CategoriesPanel/CategoriesMargin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="CategoriesTitle" type="Label" parent="OuterMargin/Layout/Content/CategoriesPanel/CategoriesMargin/Categories"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.82, 0.92, 1)
+theme_override_font_sizes/font_size = 20
+text = "Categorie"
+
+[node name="CategoriesSeparator" type="HSeparator" parent="OuterMargin/Layout/Content/CategoriesPanel/CategoriesMargin/Categories"]
+layout_mode = 2
+
+[node name="GameplayButton" type="Button" parent="OuterMargin/Layout/Content/CategoriesPanel/CategoriesMargin/Categories"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 48)
+layout_mode = 2
+toggle_mode = true
+text = "Impostazioni di gioco"
+
+[node name="GraphicsButton" type="Button" parent="OuterMargin/Layout/Content/CategoriesPanel/CategoriesMargin/Categories"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 48)
+layout_mode = 2
+toggle_mode = true
+text = "Impostazioni Grafica"
+
+[node name="VideoButton" type="Button" parent="OuterMargin/Layout/Content/CategoriesPanel/CategoriesMargin/Categories"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 48)
+layout_mode = 2
+toggle_mode = true
+text = "Impostazioni Video"
+
+[node name="AudioButton" type="Button" parent="OuterMargin/Layout/Content/CategoriesPanel/CategoriesMargin/Categories"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 48)
+layout_mode = 2
+toggle_mode = true
+text = "Impostazioni Audio"
+
+[node name="ControlsButton" type="Button" parent="OuterMargin/Layout/Content/CategoriesPanel/CategoriesMargin/Categories"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 48)
+layout_mode = 2
+toggle_mode = true
+text = "Controlli"
+
+[node name="LanguageButton" type="Button" parent="OuterMargin/Layout/Content/CategoriesPanel/CategoriesMargin/Categories"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 48)
+layout_mode = 2
+toggle_mode = true
+text = "Lingua"
+
+[node name="InterfaceButton" type="Button" parent="OuterMargin/Layout/Content/CategoriesPanel/CategoriesMargin/Categories"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 48)
+layout_mode = 2
+toggle_mode = true
+text = "Interfaccia"
+
+[node name="DetailsPanel" type="PanelContainer" parent="OuterMargin/Layout/Content"]
+custom_minimum_size = Vector2(560, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("Style_panel")
+
+[node name="DetailsMargin" type="MarginContainer" parent="OuterMargin/Layout/Content/DetailsPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 24
+
+[node name="Details" type="VBoxContainer" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="CategoryTitle" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.96, 1, 1)
+theme_override_font_sizes/font_size = 30
+text = "Impostazioni di gioco"
+
+[node name="CategoryDescription" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 54)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.75, 0.83, 1)
+theme_override_font_sizes/font_size = 17
+text = "Descrizione categoria"
+autowrap_mode = 2
+
+[node name="DetailsSeparator" type="HSeparator" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+layout_mode = 2
+
+[node name="PlaceholderCenter" type="CenterContainer" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="PlaceholderLabel" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/PlaceholderCenter"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(430, 120)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.54, 0.65, 0.73, 1)
+theme_override_font_sizes/font_size = 19
+text = "Le opzioni di questa categoria non sono ancora disponibili."
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="Footer" type="HBoxContainer" parent="OuterMargin/Layout"]
+layout_mode = 2
+alignment = 2
+theme_override_constants/separation = 12
+
+[node name="FooterHint" type="Label" parent="OuterMargin/Layout/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.55, 0.65, 0.72, 1)
+text = "Le impostazioni effettive verranno aggiunte in seguito."
+vertical_alignment = 1
+
+[node name="ApplyButton" type="Button" parent="OuterMargin/Layout/Footer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 46)
+layout_mode = 2
+text = "Applica"
+
+[node name="BackButton" type="Button" parent="OuterMargin/Layout/Footer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 46)
+layout_mode = 2
+text = "Indietro"

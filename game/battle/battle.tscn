@@ -325,7 +325,7 @@ text = "Fuggi"
 [node name="MovePanel" type="PanelContainer" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout"]
 unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(0, 210)
+custom_minimum_size = Vector2(0, 230)
 layout_mode = 2
 theme_override_styles/panel = SubResource("Style_commands")
 
@@ -337,6 +337,12 @@ theme_override_constants/separation = 8
 layout_mode = 2
 theme_override_font_sizes/font_size = 19
 text = "Mosse"
+horizontal_alignment = 1
+
+[node name="CooldownHint" type="Label" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/MovePanel/MoveLayout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.82, 0.88, 1)
+text = "CD indica i turni di attesa dopo l'uso."
 horizontal_alignment = 1
 
 [node name="MovesGrid" type="GridContainer" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/MovePanel/MoveLayout"]

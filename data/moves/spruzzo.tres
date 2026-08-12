@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="AstralMoveDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/astrals/astral_move_definition.gd" id="1_move"]
+
+[resource]
+script = ExtResource("1_move")
+move_id = &"spruzzo"
+display_name = "Spruzzo"
+description = "Un rapido getto d'acqua che investe il bersaglio."
+power = 8
+element_id = &"acqua"
+cooldown_turns = 1

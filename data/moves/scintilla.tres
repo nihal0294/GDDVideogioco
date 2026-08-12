@@ -9,3 +9,4 @@ display_name = "Scintilla"
 description = "Una rapida scintilla incendia l'aria davanti all'Astral."
 power = 8
 element_id = &"fuoco"
+cooldown_turns = 1

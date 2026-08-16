@@ -217,6 +217,14 @@ func _get_world_save_data() -> Dictionary:
 		"map_id": String(_get_map_id()),
 		"interactable_stock": interactable_stock,
 	}
+	if _world_map.has_method("get_trainer_save_data"):
+		var trainer_data: Variant = _world_map.call("get_trainer_save_data")
+		if trainer_data is Dictionary:
+			result["trainers"] = (trainer_data as Dictionary).duplicate(true)
+	if _world_map.has_method("get_npc_save_data"):
+		var npc_data: Variant = _world_map.call("get_npc_save_data")
+		if npc_data is Dictionary:
+			result["npcs"] = (npc_data as Dictionary).duplicate(true)
 	var day_night := _get_day_night_cycle()
 	if day_night != null:
 		result["time"] = day_night.get_save_data()
@@ -228,6 +236,18 @@ func _apply_world_save_data(data: Dictionary) -> void:
 	var day_night := _get_day_night_cycle()
 	if day_night != null and time_data is Dictionary:
 		day_night.load_save_data(time_data as Dictionary)
+	var raw_trainers: Variant = data.get("trainers", {})
+	if (
+		raw_trainers is Dictionary
+		and _world_map.has_method("load_trainer_save_data")
+	):
+		_world_map.call(
+			"load_trainer_save_data",
+			raw_trainers as Dictionary
+		)
+	var raw_npcs: Variant = data.get("npcs", {})
+	if raw_npcs is Dictionary and _world_map.has_method("load_npc_save_data"):
+		_world_map.call("load_npc_save_data", raw_npcs as Dictionary)
 	var raw_stock: Variant = data.get("interactable_stock", {})
 	if not (raw_stock is Dictionary) or not _world_map.has_method("get_interactables"):
 		return

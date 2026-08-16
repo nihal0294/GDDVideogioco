@@ -18,3 +18,7 @@ collision_layer = 1
 collision_mask = 0
 
 [node name="Interactables" type="Node3D" parent="."]
+
+[node name="Trainers" type="Node3D" parent="."]
+
+[node name="Npcs" type="Node3D" parent="."]

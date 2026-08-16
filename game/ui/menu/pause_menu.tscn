@@ -66,6 +66,20 @@ custom_minimum_size = Vector2(300, 48)
 layout_mode = 2
 text = "Opzioni"
 
+[node name="DeveloperFormulasButton" type="Button" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 48)
+layout_mode = 2
+text = "Formule sviluppatori"
+tooltip_text = "Apre il riferimento tecnico del combattimento in sola lettura."
+
+[node name="ElementChartButton" type="Button" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 48)
+layout_mode = 2
+text = "Tabella elementi"
+tooltip_text = "Consulta debolezze e resistenze di tutti gli elementi."
+
 [node name="SaveButton" type="Button" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 48)

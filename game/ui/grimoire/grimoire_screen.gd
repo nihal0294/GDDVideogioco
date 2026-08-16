@@ -141,11 +141,18 @@ func _show_entry(entry: GrimoireEntry) -> void:
 	habitat_value.text = entry.habitat
 	description_value.text = definition.description
 	field_notes_value.text = entry.field_notes
-	stats_value.text = "HP %d    ATT %d    VEL %d" % [
+	stats_value.text = (
+		"HP %d    Atk %d    PDef %d\nAtkm %d    MDef %d    Spd %d    BST %d"
+		% [
 		definition.max_health,
 		definition.attack_power,
+		definition.physical_defense,
+		definition.magic_attack,
+		definition.magic_defense,
 		definition.speed,
+		definition.get_base_stat_total(),
 	]
+	)
 	var move_names: Array[String] = []
 	for move: AstralMoveDefinition in definition.starting_moves:
 		if move != null:

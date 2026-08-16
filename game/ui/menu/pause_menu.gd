@@ -3,12 +3,16 @@ extends Control
 
 signal continue_requested
 signal options_requested
+signal developer_formulas_requested
+signal element_chart_requested
 signal save_requested
 signal load_requested
 signal exit_requested
 
 @onready var continue_button: Button = %ContinueButton
 @onready var options_button: Button = %OptionsButton
+@onready var developer_formulas_button: Button = %DeveloperFormulasButton
+@onready var element_chart_button: Button = %ElementChartButton
 @onready var save_button: Button = %SaveButton
 @onready var load_button: Button = %LoadButton
 @onready var exit_button: Button = %ExitButton
@@ -17,6 +21,8 @@ signal exit_requested
 func _ready() -> void:
 	continue_button.pressed.connect(_on_continue_pressed)
 	options_button.pressed.connect(_on_options_pressed)
+	developer_formulas_button.pressed.connect(_on_developer_formulas_pressed)
+	element_chart_button.pressed.connect(_on_element_chart_pressed)
 	save_button.pressed.connect(_on_save_pressed)
 	load_button.pressed.connect(_on_load_pressed)
 	exit_button.pressed.connect(_on_exit_pressed)
@@ -59,6 +65,14 @@ func _on_options_pressed() -> void:
 	options_requested.emit()
 
 
+func _on_developer_formulas_pressed() -> void:
+	developer_formulas_requested.emit()
+
+
+func _on_element_chart_pressed() -> void:
+	element_chart_requested.emit()
+
+
 func _on_save_pressed() -> void:
 	save_requested.emit()
 
@@ -83,8 +97,12 @@ func _focus_first_action() -> void:
 func _configure_focus_navigation() -> void:
 	continue_button.focus_neighbor_bottom = continue_button.get_path_to(options_button)
 	options_button.focus_neighbor_top = options_button.get_path_to(continue_button)
-	options_button.focus_neighbor_bottom = options_button.get_path_to(save_button)
-	save_button.focus_neighbor_top = save_button.get_path_to(options_button)
+	options_button.focus_neighbor_bottom = options_button.get_path_to(developer_formulas_button)
+	developer_formulas_button.focus_neighbor_top = developer_formulas_button.get_path_to(options_button)
+	developer_formulas_button.focus_neighbor_bottom = developer_formulas_button.get_path_to(element_chart_button)
+	element_chart_button.focus_neighbor_top = element_chart_button.get_path_to(developer_formulas_button)
+	element_chart_button.focus_neighbor_bottom = element_chart_button.get_path_to(save_button)
+	save_button.focus_neighbor_top = save_button.get_path_to(element_chart_button)
 	save_button.focus_neighbor_bottom = save_button.get_path_to(load_button)
 	load_button.focus_neighbor_top = load_button.get_path_to(save_button)
 	load_button.focus_neighbor_bottom = load_button.get_path_to(exit_button)

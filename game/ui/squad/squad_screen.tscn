@@ -195,6 +195,12 @@ autowrap_mode = 2
 [node name="SeparatorTop" type="HSeparator" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
 layout_mode = 2
 
+[node name="StatsTitle" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.71, 0.85, 0.92, 1)
+theme_override_font_sizes/font_size = 20
+text = "Statistiche base"
+
 [node name="StatsGrid" type="GridContainer" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
 layout_mode = 2
 theme_override_constants/h_separation = 22
@@ -213,10 +219,23 @@ size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 18
 text = "1"
 
+[node name="BstLabel" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/StatsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.68, 0.76, 1)
+text = "Totale (BST)"
+
+[node name="BstValue" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/StatsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 0.78, 0.3, 1)
+theme_override_font_sizes/font_size = 18
+text = "—"
+
 [node name="AttackLabel" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/StatsGrid"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.68, 0.76, 1)
-text = "Attacco"
+text = "Attacco (Atk)"
 
 [node name="AttackValue" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/StatsGrid"]
 unique_name_in_owner = true
@@ -228,7 +247,7 @@ text = "—"
 [node name="HealthLabel" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/StatsGrid"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.68, 0.76, 1)
-text = "Salute"
+text = "Vita (HP)"
 
 [node name="HealthValue" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/StatsGrid"]
 unique_name_in_owner = true
@@ -240,9 +259,45 @@ text = "0 / 0"
 [node name="SpeedLabel" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/StatsGrid"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.68, 0.76, 1)
-text = "Velocità"
+text = "Velocità (Spd)"
 
 [node name="SpeedValue" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/StatsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "—"
+
+[node name="PhysicalDefenseLabel" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/StatsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.68, 0.76, 1)
+text = "Difesa fisica (PDef)"
+
+[node name="PhysicalDefenseValue" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/StatsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "—"
+
+[node name="MagicAttackLabel" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/StatsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.68, 0.76, 1)
+text = "Attacco magico (Atkm)"
+
+[node name="MagicAttackValue" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/StatsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "—"
+
+[node name="MagicDefenseLabel" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/StatsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.68, 0.76, 1)
+text = "Difesa magica (MDef)"
+
+[node name="MagicDefenseValue" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/StatsGrid"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3

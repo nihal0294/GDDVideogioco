@@ -4,6 +4,21 @@ extends Node3D
 @warning_ignore_start("shadowed_variable_base_class")
 
 signal wild_encounter_requested(zone_id: StringName, actor: Node3D)
+signal trainer_challenge_requested(trainer: TrainerNpc, actor: CharacterBody3D)
+signal trainer_dialogue_requested(trainer: TrainerNpc, dialogue: String)
+signal trainer_battle_requested(trainer: TrainerNpc)
+signal trainer_challenge_cancelled(trainer: TrainerNpc)
+signal npc_interaction_started(
+	npc: WorldNpc,
+	actor: CharacterBody3D,
+	dialogue: String
+)
+signal npc_interaction_finished(npc: WorldNpc, actor: CharacterBody3D)
+signal npc_florins_gift_requested(
+	npc: WorldNpc,
+	actor: CharacterBody3D,
+	amount: int
+)
 
 const VEGETATION_WIND_SCRIPT := preload(
 	"res://game/world/environment/vegetation_wind.gd"
@@ -14,6 +29,48 @@ const DAY_NIGHT_CYCLE_SCRIPT := preload(
 const ICONIC_LANDMARKS_SCRIPT := preload(
 	"res://game/world/maps/verdant_valley/iconic_landmarks.gd"
 )
+const TRAINER_SCENE: PackedScene = preload(
+	"res://game/npcs/trainers/trainer_npc.tscn"
+)
+const WORLD_NPC_SCENE: PackedScene = preload(
+	"res://game/npcs/world_npc.tscn"
+)
+const TRAINER_ASTRALS: Array[AstralDefinition] = [
+	preload("res://data/astrals/wyrm_di_lava.tres"),
+	preload("res://data/astrals/topo_onda.tres"),
+	preload("res://data/astrals/orso_fatato.tres"),
+	preload("res://data/astrals/slime_arcobaleno.tres"),
+]
+const TRAINER_LINES: Array[String] = [
+	"Magliettina di Prada. Leggera.. mica tarocca eh! Originale!",
+	"Te dovevi vedere l'altra sera! Avevo fumato ero di un in botta che tu non puoi capire! Uno Svarione! Ma un fuorismo Ganjalf!",
+	"Sta zitto marylin Manson.. Sbaraccati fuori dai coglioni e va a mangiare un pipistrello in camera tua!!",
+	"Dovevo ascoltare mio nonno, me l'aveva anche detto lui di non andare.. E io invece.. Sempre dietro come un Coglione!",
+]
+const TRAINER_Z_BANDS: Array[Vector2] = [
+	Vector2(-58.0, -48.0),
+	Vector2(-43.0, -36.0),
+	Vector2(5.0, 15.0),
+	Vector2(36.0, 48.0),
+]
+const TRAINER_COLORS: Array[Color] = [
+	Color("d94f45"),
+	Color("3d8fd1"),
+	Color("6cb557"),
+	Color("9a67cc"),
+]
+const TRAINER_REWARD_ITEMS: Array[StringName] = [
+	&"bacca", &"fungo", &"cocco", &"stoffa",
+]
+const TRAINER_REWARD_AMOUNTS: Array[int] = [2, 2, 1, 2]
+const TRAINER_REWARD_FLORINS: Array[int] = [50, 70, 90, 120]
+const WORLD_NPC_DIALOGUES: Array[String] = [
+	"Ai miei tempi i sentieri li costruivamo meglio: pietra su pietra, e non cresceva tutta quest'erba tra le fughe!",
+	"Eheheh... prendi questi 200 Fiorini e continua la tua avventura, ragazzo!",
+]
+const WORLD_NPC_NAMES: Array[String] = ["Mastro Elio", "Ser Fiorenzo"]
+const WORLD_NPC_COLORS: Array[Color] = [Color("a56f3f"), Color("d2a33f")]
+const WORLD_NPC_GROUP_Z: float = -20.0
 
 @export_group("Wind")
 @export_range(0.0, 2.0, 0.05) var wind_strength: float = 1.0
@@ -143,11 +200,14 @@ const MEADOW_COLOR := Color("91c955")
 @onready var prop_collisions: StaticBody3D = $PropCollisions
 @onready var boundary_collisions: StaticBody3D = $BoundaryVegetationCollisions
 @onready var interactables_container: Node3D = $Interactables
+@onready var trainers_container: Node3D = $Trainers
+@onready var npcs_container: Node3D = $Npcs
 
 var _height_noise := FastNoiseLite.new()
 var _detail_noise := FastNoiseLite.new()
 var _distribution_noise := FastNoiseLite.new()
 var _random := RandomNumberGenerator.new()
+var _trainer_random := RandomNumberGenerator.new()
 var _terrain_material := StandardMaterial3D.new()
 var _model_transforms: Dictionary = {}
 var _tree_positions: Array[Vector2] = []
@@ -162,6 +222,8 @@ func _ready() -> void:
 	_setup_vegetation_wind()
 	_setup_day_night_cycle()
 	_build_multimeshes()
+	_setup_trainers()
+	_setup_world_npcs()
 	generation_finished.emit()
 
 
@@ -299,11 +361,179 @@ func get_interactables() -> Array[InteractableArea3D]:
 	return result
 
 
+func get_trainers() -> Array[TrainerNpc]:
+	var result: Array[TrainerNpc] = []
+	for child: Node in trainers_container.get_children():
+		var trainer := child as TrainerNpc
+		if trainer != null:
+			result.append(trainer)
+	return result
+
+
+func get_trainer_save_data() -> Dictionary:
+	var result: Dictionary = {}
+	for trainer: TrainerNpc in get_trainers():
+		if not trainer.npc_id.is_empty():
+			result[String(trainer.npc_id)] = trainer.get_save_data()
+	return result
+
+
+func load_trainer_save_data(data: Dictionary) -> void:
+	for trainer: TrainerNpc in get_trainers():
+		var key := String(trainer.npc_id)
+		var raw_trainer_data: Variant = data.get(key, {})
+		if raw_trainer_data is Dictionary:
+			trainer.load_save_data(raw_trainer_data as Dictionary)
+
+
+func get_world_npcs() -> Array[WorldNpc]:
+	var result: Array[WorldNpc] = []
+	for child: Node in npcs_container.get_children():
+		var npc := child as WorldNpc
+		if npc != null:
+			result.append(npc)
+	return result
+
+
+func get_npc_save_data() -> Dictionary:
+	var result: Dictionary = {}
+	for npc: WorldNpc in get_world_npcs():
+		if not npc.npc_id.is_empty():
+			result[String(npc.npc_id)] = npc.get_save_data()
+	return result
+
+
+func load_npc_save_data(data: Dictionary) -> void:
+	for npc: WorldNpc in get_world_npcs():
+		var key := String(npc.npc_id)
+		var raw_npc_data: Variant = data.get(key, {})
+		if raw_npc_data is Dictionary:
+			npc.load_save_data(raw_npc_data as Dictionary)
+
+
+func _setup_trainers() -> void:
+	for child: Node in trainers_container.get_children():
+		child.queue_free()
+	_trainer_random.seed = generation_seed + 3301
+	var scene_root := get_parent()
+	var map_player: CharacterBody3D = null
+	if scene_root != null:
+		map_player = scene_root.get_node_or_null("Player") as CharacterBody3D
+	for trainer_index: int in TRAINER_LINES.size():
+		var trainer := TRAINER_SCENE.instantiate() as TrainerNpc
+		if trainer == null:
+			push_error("Impossibile istanziare l'allenatore %d." % (trainer_index + 1))
+			continue
+		var z_band := TRAINER_Z_BANDS[trainer_index]
+		var world_z := _trainer_random.randf_range(z_band.x, z_band.y)
+		var world_x := (
+			get_path_center_x(world_z)
+			+ _trainer_random.randf_range(-1.35, 1.35)
+		)
+		trainer.name = "Trainer%02d" % (trainer_index + 1)
+		trainer.npc_id = &"verdant_trainer_%02d" % (trainer_index + 1)
+		trainer.display_name = "Allenatore %d" % (trainer_index + 1)
+		trainer.challenge_line = TRAINER_LINES[trainer_index]
+		trainer.astral_definition = TRAINER_ASTRALS[trainer_index]
+		trainer.astral_level = 5
+		trainer.reward_florins = TRAINER_REWARD_FLORINS[trainer_index]
+		trainer.reward_item_id = TRAINER_REWARD_ITEMS[trainer_index]
+		trainer.reward_item_amount = TRAINER_REWARD_AMOUNTS[trainer_index]
+		trainer.player = map_player
+		trainer.position = Vector3(
+			world_x,
+			get_terrain_height(world_x, world_z) + 0.08,
+			world_z
+		)
+		trainer.rotation.y = PI
+		trainer.challenge_detected.connect(_on_trainer_challenge_detected)
+		trainer.dialogue_started.connect(_on_trainer_dialogue_started)
+		trainer.battle_requested.connect(_on_trainer_battle_requested)
+		trainer.challenge_cancelled.connect(_on_trainer_challenge_cancelled)
+		trainers_container.add_child(trainer)
+		trainer.set_visual_color(TRAINER_COLORS[trainer_index])
+
+
+func _on_trainer_challenge_detected(
+	trainer: TrainerNpc,
+	actor: CharacterBody3D
+) -> void:
+	trainer_challenge_requested.emit(trainer, actor)
+
+
+func _on_trainer_dialogue_started(
+	trainer: TrainerNpc,
+	dialogue: String
+) -> void:
+	trainer_dialogue_requested.emit(trainer, dialogue)
+
+
+func _on_trainer_battle_requested(trainer: TrainerNpc) -> void:
+	trainer_battle_requested.emit(trainer)
+
+
+func _on_trainer_challenge_cancelled(trainer: TrainerNpc) -> void:
+	trainer_challenge_cancelled.emit(trainer)
+
+
+func _setup_world_npcs() -> void:
+	for child: Node in npcs_container.get_children():
+		child.queue_free()
+	var path_x := get_path_center_x(WORLD_NPC_GROUP_Z)
+	var x_offsets: Array[float] = [-1.2, 1.2]
+	for npc_index: int in WORLD_NPC_DIALOGUES.size():
+		var npc := WORLD_NPC_SCENE.instantiate() as WorldNpc
+		if npc == null:
+			push_error("Impossibile istanziare l'NPC %d." % (npc_index + 1))
+			continue
+		var world_x := path_x + x_offsets[npc_index]
+		npc.name = "WorldNpc%02d" % (npc_index + 1)
+		npc.npc_id = &"verdant_npc_%02d" % (npc_index + 1)
+		npc.display_name = WORLD_NPC_NAMES[npc_index]
+		npc.dialogue_line = WORLD_NPC_DIALOGUES[npc_index]
+		npc.florins_gift = 200 if npc_index == 1 else 0
+		npc.position = Vector3(
+			world_x,
+			get_terrain_height(world_x, WORLD_NPC_GROUP_Z) + 0.08,
+			WORLD_NPC_GROUP_Z
+		)
+		npc.rotation.y = PI
+		npc.interaction_started.connect(_on_npc_interaction_started)
+		npc.interaction_finished.connect(_on_npc_interaction_finished)
+		npc.florins_gift_requested.connect(_on_npc_florins_gift_requested)
+		npcs_container.add_child(npc)
+		npc.set_visual_color(WORLD_NPC_COLORS[npc_index])
+
+
+func _on_npc_interaction_started(
+	npc: WorldNpc,
+	actor: CharacterBody3D,
+	dialogue: String
+) -> void:
+	npc_interaction_started.emit(npc, actor, dialogue)
+
+
+func _on_npc_interaction_finished(
+	npc: WorldNpc,
+	actor: CharacterBody3D
+) -> void:
+	npc_interaction_finished.emit(npc, actor)
+
+
+func _on_npc_florins_gift_requested(
+	npc: WorldNpc,
+	actor: CharacterBody3D,
+	amount: int
+) -> void:
+	npc_florins_gift_requested.emit(npc, actor, amount)
+
+
 func _configure_generation() -> void:
 	map_size.x = maxf(map_size.x, chunk_size)
 	map_size.y = maxf(map_size.y, chunk_size)
 	vertex_spacing = minf(vertex_spacing, chunk_size)
 	_random.seed = generation_seed
+	_trainer_random.seed = generation_seed + 3301
 
 	_height_noise.seed = generation_seed
 	_height_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH

@@ -1,0 +1,62 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://game/npcs/trainers/trainer_npc.gd" id="1_trainer"]
+
+[sub_resource type="StandardMaterial3D" id="Material_body"]
+albedo_color = Color(0.82, 0.32, 0.28, 1)
+roughness = 0.64
+
+[sub_resource type="CapsuleMesh" id="Mesh_body"]
+material = SubResource("Material_body")
+radius = 0.48
+height = 1.9
+
+[sub_resource type="StandardMaterial3D" id="Material_marker"]
+albedo_color = Color(1, 0.77, 0.14, 1)
+roughness = 0.5
+
+[sub_resource type="BoxMesh" id="Mesh_marker"]
+material = SubResource("Material_marker")
+size = Vector3(0.2, 0.24, 0.32)
+
+[sub_resource type="CapsuleShape3D" id="Shape_body"]
+radius = 0.48
+height = 1.9
+
+[node name="TrainerNpc" type="CharacterBody3D"]
+collision_layer = 1
+collision_mask = 3
+floor_snap_length = 0.3
+script = ExtResource("1_trainer")
+
+[node name="Visual" type="Node3D" parent="."]
+
+[node name="Body" type="MeshInstance3D" parent="Visual"]
+position = Vector3(0, 0.95, 0)
+cast_shadow = 1
+mesh = SubResource("Mesh_body")
+
+[node name="FacingMarker" type="MeshInstance3D" parent="Visual"]
+position = Vector3(0, 1.1, -0.5)
+cast_shadow = 1
+mesh = SubResource("Mesh_marker")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.95, 0)
+shape = SubResource("Shape_body")
+
+[node name="NameLabel" type="Label3D" parent="."]
+position = Vector3(0, 2.35, 0)
+billboard = 1
+text = "Allenatore"
+font_size = 22
+outline_size = 5
+modulate = Color(0.94, 0.97, 1, 1)
+
+[node name="ChallengeMarker" type="Label3D" parent="."]
+position = Vector3(0, 3.0, 0)
+billboard = 1
+text = "!"
+font_size = 42
+outline_size = 8
+modulate = Color(1, 0.75, 0.12, 1)

@@ -1,0 +1,99 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/ui/developer/developer_formulas_screen.gd" id="1_formulas"]
+
+[node name="DeveloperFormulasScreen" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+script = ExtResource("1_formulas")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+color = Color(0.018, 0.026, 0.043, 0.97)
+
+[node name="OuterMargin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 54
+theme_override_constants/margin_top = 34
+theme_override_constants/margin_right = 54
+theme_override_constants/margin_bottom = 34
+
+[node name="Panel" type="PanelContainer" parent="OuterMargin"]
+layout_mode = 2
+
+[node name="PanelMargin" type="MarginContainer" parent="OuterMargin/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 24
+
+[node name="Layout" type="VBoxContainer" parent="OuterMargin/Panel/PanelMargin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="OuterMargin/Panel/PanelMargin/Layout"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 34
+text = "Riferimento formule — Sviluppatori"
+
+[node name="Subtitle" type="Label" parent="OuterMargin/Panel/PanelMargin/Layout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.56, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 17
+text = "Valori e ordine delle operazioni attualmente applicati dal sistema di combattimento."
+
+[node name="Separator" type="HSeparator" parent="OuterMargin/Panel/PanelMargin/Layout"]
+layout_mode = 2
+
+[node name="Scroll" type="ScrollContainer" parent="OuterMargin/Panel/PanelMargin/Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="FormulaText" type="RichTextLabel" parent="OuterMargin/Panel/PanelMargin/Layout/Scroll"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 840)
+layout_mode = 2
+size_flags_horizontal = 3
+bbcode_enabled = true
+fit_content = true
+selection_enabled = true
+context_menu_enabled = false
+scroll_active = false
+theme_override_constants/line_separation = 5
+theme_override_font_sizes/normal_font_size = 18
+
+[node name="Footer" type="HBoxContainer" parent="OuterMargin/Panel/PanelMargin/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ReadOnlyHint" type="Label" parent="OuterMargin/Panel/PanelMargin/Layout/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.56, 0.65, 0.72, 1)
+text = "Sola lettura: nessun valore è modificabile da questa schermata."
+vertical_alignment = 1
+
+[node name="BackButton" type="Button" parent="OuterMargin/Panel/PanelMargin/Layout/Footer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(170, 46)
+layout_mode = 2
+text = "Indietro"

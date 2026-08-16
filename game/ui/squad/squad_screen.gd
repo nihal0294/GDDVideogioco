@@ -12,9 +12,13 @@ const PRESENTATION := preload("res://game/astrals/astral_presentation.gd")
 @onready var position_label: Label = %PositionLabel
 @onready var description_label: Label = %DescriptionLabel
 @onready var level_value: Label = %LevelValue
+@onready var bst_value: Label = %BstValue
 @onready var health_value: Label = %HealthValue
 @onready var health_bar: ProgressBar = %HealthBar
 @onready var attack_value: Label = %AttackValue
+@onready var physical_defense_value: Label = %PhysicalDefenseValue
+@onready var magic_attack_value: Label = %MagicAttackValue
+@onready var magic_defense_value: Label = %MagicDefenseValue
 @onready var speed_value: Label = %SpeedValue
 @onready var elements_value: Label = %ElementsValue
 @onready var experience_value: Label = %ExperienceValue
@@ -266,6 +270,10 @@ func _show_astral_details(astral: AstralInstance, roster_index: int) -> void:
 	lead_badge.visible = roster_index == 0
 	position_label.text = "Posizione in squadra: %d" % (roster_index + 1)
 	level_value.text = str(astral.level)
+	bst_value.text = "%d / %d" % [
+		definition.get_base_stat_total(),
+		AstralDefinition.MAX_BASE_STAT_TOTAL,
+	]
 
 	var maximum_health := _get_maximum_health(astral, definition)
 	health_value.text = "%d / %d" % [astral.current_health, maximum_health]
@@ -278,6 +286,9 @@ func _show_astral_details(astral: AstralInstance, roster_index: int) -> void:
 			[&"attack_power", &"attack", &"base_attack"]
 		)
 	)
+	physical_defense_value.text = str(definition.physical_defense)
+	magic_attack_value.text = str(definition.magic_attack)
+	magic_defense_value.text = str(definition.magic_defense)
 	speed_value.text = _format_numeric_stat(
 		_get_instance_or_definition_value(
 			astral,
@@ -437,10 +448,21 @@ func _format_move(move: Variant) -> String:
 			[&"element_id"],
 			&"neutro"
 		)
+		var damage_class: Variant = _get_property_value(
+			move_object,
+			[&"damage_class"],
+			AstralMoveDefinition.DamageClass.PHYSICAL
+		)
+		var damage_class_name := (
+			"Magica"
+			if int(damage_class) == AstralMoveDefinition.DamageClass.MAGICAL
+			else "Fisica"
+		)
 		if power != null:
-			return "%s    Potenza %s    CD %d    %s" % [
+			return "%s    Potenza %s    %s    CD %d    %s" % [
 				str(move_name),
 				str(power),
+				damage_class_name,
 				int(cooldown),
 				PRESENTATION.get_element_symbol(StringName(element)),
 			]
@@ -508,10 +530,14 @@ func _clear_details() -> void:
 	position_label.text = "Posizione in squadra: —"
 	description_label.text = "Seleziona un Astral per visualizzarne la scheda."
 	level_value.text = "—"
+	bst_value.text = "—"
 	health_value.text = "—"
 	health_bar.max_value = 1.0
 	health_bar.value = 0.0
 	attack_value.text = "—"
+	physical_defense_value.text = "—"
+	magic_attack_value.text = "—"
+	magic_defense_value.text = "—"
 	speed_value.text = "—"
 	elements_value.text = "—"
 	experience_value.text = "EXP —    •    Prossimo livello: —"

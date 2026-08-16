@@ -9,15 +9,18 @@ extends CharacterBody3D
 @onready var visual: Node3D = $Visual
 
 var gravity: float = float(ProjectSettings.get_setting("physics/3d/default_gravity"))
+var _movement_locks: Dictionary[StringName, bool] = {}
 
 
 func _physics_process(delta: float) -> void:
-	var input_direction := Input.get_vector(
-		"move_left",
-		"move_right",
-		"move_forward",
-		"move_backward"
-	)
+	var input_direction := Vector2.ZERO
+	if _movement_locks.is_empty():
+		input_direction = Input.get_vector(
+			"move_left",
+			"move_right",
+			"move_forward",
+			"move_backward"
+		)
 	var move_direction := Vector3(input_direction.x, 0.0, input_direction.y).normalized()
 	var target_horizontal_velocity := move_direction * move_speed
 	var horizontal_velocity := Vector3(velocity.x, 0.0, velocity.z)
@@ -31,7 +34,10 @@ func _physics_process(delta: float) -> void:
 	velocity.z = horizontal_velocity.z
 
 	if is_on_floor():
-		if Input.is_action_just_pressed("jump"):
+		if (
+			_movement_locks.is_empty()
+			and Input.is_action_just_pressed("jump")
+		):
 			velocity.y = jump_velocity
 		elif velocity.y < 0.0:
 			velocity.y = 0.0
@@ -47,3 +53,22 @@ func _physics_process(delta: float) -> void:
 			target_rotation,
 			turn_speed * delta
 		)
+
+
+func set_movement_lock(lock_id: StringName, active: bool) -> void:
+	if lock_id.is_empty():
+		return
+	if active:
+		_movement_locks[lock_id] = true
+		velocity.x = 0.0
+		velocity.z = 0.0
+	else:
+		_movement_locks.erase(lock_id)
+
+
+func has_movement_lock(lock_id: StringName) -> bool:
+	return _movement_locks.has(lock_id)
+
+
+func is_movement_locked() -> bool:
+	return not _movement_locks.is_empty()

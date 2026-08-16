@@ -56,6 +56,9 @@ var _wild_ko_experience_awarded: bool = false
 var _player_turn_index: int = 1
 var _wild_turn_index: int = 1
 var _move_ready_turns: Dictionary = {}
+var _damage_random := RandomNumberGenerator.new()
+var _trainer_battle: bool = false
+var _opponent_name: String = ""
 
 
 func _ready() -> void:
@@ -119,6 +122,11 @@ func setup(
 	_player_turn_index = 1
 	_wild_turn_index = 1
 	_move_ready_turns.clear()
+	if encounter_random != null:
+		_damage_random = encounter_random
+	else:
+		_damage_random = RandomNumberGenerator.new()
+		_damage_random.randomize()
 	_apply_astral_visual(player_visual, _player_astral)
 	_apply_astral_visual(wild_visual, _wild_astral)
 	_refresh_status()
@@ -140,8 +148,15 @@ func begin() -> void:
 		return
 
 	_state = BattleState.INTRO
-	message_label.text = "%s appare dall'erba alta!" % (
-		PRESENTATION.format_identity(_wild_astral)
+	message_label.text = (
+		"%s manda in campo %s!" % [
+			_opponent_name,
+			PRESENTATION.format_identity(_wild_astral),
+		]
+		if _trainer_battle
+		else "%s appare dall'erba alta!" % (
+			PRESENTATION.format_identity(_wild_astral)
+		)
 	)
 	await _wait_for_action()
 	if _state == BattleState.INTRO:
@@ -205,11 +220,17 @@ func choose_switch() -> void:
 func choose_capture() -> void:
 	if _state != BattleState.COMMAND:
 		return
+	if _trainer_battle:
+		message_label.text = "Non puoi catturare l'Astral di un allenatore."
+		return
 	_resolve_capture()
 
 
 func choose_flee() -> void:
 	if _state != BattleState.COMMAND:
+		return
+	if _trainer_battle:
+		message_label.text = "Non puoi fuggire da una sfida tra allenatori."
 		return
 	message_label.text = "Ti allontani dal combattimento."
 	_finish_battle(&"fled")
@@ -302,6 +323,21 @@ func get_state() -> BattleState:
 	return _state
 
 
+func configure_trainer_battle(trainer_name: String) -> void:
+	_trainer_battle = true
+	_opponent_name = trainer_name.strip_edges()
+	if _opponent_name.is_empty():
+		_opponent_name = "Allenatore"
+	if is_node_ready():
+		_set_command_buttons_disabled(_state != BattleState.COMMAND)
+		capture_button.tooltip_text = "Gli Astral degli allenatori non possono essere catturati."
+		flee_button.tooltip_text = "Una sfida tra allenatori deve essere conclusa."
+
+
+func is_trainer_battle() -> bool:
+	return _trainer_battle
+
+
 func get_player_turn_index() -> int:
 	return _player_turn_index
 
@@ -326,6 +362,10 @@ func get_wild_move_cooldown_remaining(move_index: int) -> int:
 	)
 
 
+func set_damage_random_seed(seed_value: int) -> void:
+	_damage_random.seed = seed_value
+
+
 func _select_initial_usable_astral() -> void:
 	if (
 		_roster == null
@@ -347,17 +387,20 @@ func _resolve_player_move(move: AstralMoveDefinition) -> void:
 		or _wild_astral == null
 	):
 		return
-	var calculated_damage := BattleMath.calculate_damage(
+	var damage_result := BattleMath.roll_damage(
 		_player_astral,
 		_wild_astral,
-		move
+		move,
+		_damage_random
 	)
-	var applied_damage := _wild_astral.take_damage(calculated_damage)
+	var applied_damage := _wild_astral.take_damage(damage_result.damage)
 	message_label.text = "%s usa %s e infligge %d danni." % [
 		_player_astral.definition.display_name,
 		move.display_name,
 		applied_damage,
 	]
+	if damage_result.is_critical_hit:
+		message_label.text += " Brutto colpo!"
 	_refresh_status()
 	await _wait_for_action()
 	if _state != BattleState.RESOLVING:
@@ -417,17 +460,20 @@ func _resolve_wild_counterattack() -> void:
 		return
 
 	_commit_wild_move(move_index)
-	var calculated_damage := BattleMath.calculate_damage(
+	var damage_result := BattleMath.roll_damage(
 		_wild_astral,
 		_player_astral,
-		move
+		move,
+		_damage_random
 	)
-	var applied_damage := _player_astral.take_damage(calculated_damage)
+	var applied_damage := _player_astral.take_damage(damage_result.damage)
 	message_label.text = "%s usa %s e infligge %d danni." % [
 		_wild_astral.definition.display_name,
 		move.display_name,
 		applied_damage,
 	]
+	if damage_result.is_critical_hit:
+		message_label.text += " Brutto colpo!"
 	_refresh_status()
 	await _wait_for_action()
 	if _state != BattleState.RESOLVING:
@@ -557,10 +603,11 @@ func _rebuild_move_buttons() -> void:
 			)
 			var move_button := Button.new()
 			move_button.custom_minimum_size = Vector2(300.0, 54.0)
-			move_button.text = "%s  [POT %d | %s | CD %d%s]" % [
+			move_button.text = "%s  [POT %d | %s | %s | CD %d%s]" % [
 				move.display_name,
 				move.power,
 				PRESENTATION.format_element(move.element_id),
+				move.get_damage_class_name(),
 				move.cooldown_turns,
 				(
 					" | Attesa %d" % cooldown_remaining
@@ -785,8 +832,8 @@ func _set_command_buttons_disabled(disabled: bool) -> void:
 	fight_button.disabled = disabled
 	items_button.disabled = disabled
 	switch_button.disabled = disabled
-	capture_button.disabled = disabled
-	flee_button.disabled = disabled
+	capture_button.disabled = disabled or _trainer_battle
+	flee_button.disabled = disabled or _trainer_battle
 
 
 func _wait_for_action() -> void:

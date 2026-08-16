@@ -3,6 +3,8 @@ extends CanvasLayer
 
 @onready var pause_menu: PauseMenu = $PauseMenu
 @onready var options_screen: OptionsScreen = $OptionsScreen
+@onready var developer_formulas_screen: DeveloperFormulasScreen = $DeveloperFormulasScreen
+@onready var element_chart_screen: ElementChartScreen = $ElementChartScreen
 @onready var save_slots_screen: SaveSlotsScreen = $SaveSlotsScreen
 @onready var inventory_screen: InventoryScreen = $InventoryScreen
 @onready var squad_screen: SquadScreen = $SquadScreen
@@ -19,10 +21,14 @@ var _save_manager: SaveManager = null
 func _ready() -> void:
 	pause_menu.continue_requested.connect(_on_continue_requested)
 	pause_menu.options_requested.connect(_on_options_requested)
+	pause_menu.developer_formulas_requested.connect(_on_developer_formulas_requested)
+	pause_menu.element_chart_requested.connect(_on_element_chart_requested)
 	pause_menu.save_requested.connect(_on_save_requested)
 	pause_menu.load_requested.connect(_on_load_requested)
 	options_screen.apply_requested.connect(_on_options_apply_requested)
 	options_screen.back_requested.connect(_return_to_pause_menu)
+	developer_formulas_screen.back_requested.connect(_return_to_pause_menu)
+	element_chart_screen.back_requested.connect(_return_to_pause_menu)
 	save_slots_screen.save_slot_requested.connect(_on_save_slot_requested)
 	save_slots_screen.load_slot_requested.connect(_on_load_slot_requested)
 	save_slots_screen.back_requested.connect(_return_to_pause_menu)
@@ -93,6 +99,8 @@ func set_pause_lock(lock_id: StringName, active: bool) -> void:
 		_pause_locks[lock_id] = true
 		pause_menu.close()
 		options_screen.close()
+		developer_formulas_screen.close()
+		element_chart_screen.close()
 		save_slots_screen.close()
 		inventory_screen.close()
 		squad_screen.close()
@@ -154,31 +162,36 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed("toggle_menu"):
-		if options_screen.visible or save_slots_screen.visible:
+		if (
+			options_screen.visible
+			or developer_formulas_screen.visible
+			or element_chart_screen.visible
+			or save_slots_screen.visible
+		):
 			_return_to_pause_menu()
 		else:
 			_toggle_pause_menu()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("toggle_inventory"):
-		if options_screen.visible or save_slots_screen.visible:
+		if _is_pause_subscreen_visible():
 			get_viewport().set_input_as_handled()
 			return
 		_toggle_inventory()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("toggle_squad"):
-		if options_screen.visible or save_slots_screen.visible:
+		if _is_pause_subscreen_visible():
 			get_viewport().set_input_as_handled()
 			return
 		_toggle_squad()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("toggle_grimoire"):
-		if options_screen.visible or save_slots_screen.visible:
+		if _is_pause_subscreen_visible():
 			get_viewport().set_input_as_handled()
 			return
 		_toggle_grimoire()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("toggle_player_profile"):
-		if options_screen.visible or save_slots_screen.visible:
+		if _is_pause_subscreen_visible():
 			get_viewport().set_input_as_handled()
 			return
 		_toggle_player_profile()
@@ -255,6 +268,18 @@ func _on_options_requested() -> void:
 	_sync_pause_state()
 
 
+func _on_developer_formulas_requested() -> void:
+	pause_menu.close()
+	developer_formulas_screen.open()
+	_sync_pause_state()
+
+
+func _on_element_chart_requested() -> void:
+	pause_menu.close()
+	element_chart_screen.open()
+	_sync_pause_state()
+
+
 func _on_options_apply_requested() -> void:
 	show_notification("Impostazioni applicate.")
 
@@ -315,6 +340,8 @@ func _on_load_slot_requested(slot_index: int) -> void:
 
 func _return_to_pause_menu() -> void:
 	options_screen.close()
+	developer_formulas_screen.close()
+	element_chart_screen.close()
 	save_slots_screen.close()
 	pause_menu.open(_save_manager != null and _save_manager.has_saves())
 	_sync_pause_state()
@@ -340,6 +367,8 @@ func _close_modal_screens(exception_screen: Control = null) -> void:
 	var screens: Array[Control] = [
 		pause_menu,
 		options_screen,
+		developer_formulas_screen,
+		element_chart_screen,
 		save_slots_screen,
 		inventory_screen,
 		squad_screen,
@@ -360,11 +389,22 @@ func _sync_pause_state() -> void:
 		not _pause_locks.is_empty()
 		or pause_menu.visible
 		or options_screen.visible
+		or developer_formulas_screen.visible
+		or element_chart_screen.visible
 		or save_slots_screen.visible
 		or inventory_screen.visible
 		or squad_screen.visible
 		or grimoire_screen.visible
 		or player_profile_screen.visible
+	)
+
+
+func _is_pause_subscreen_visible() -> bool:
+	return (
+		options_screen.visible
+		or developer_formulas_screen.visible
+		or element_chart_screen.visible
+		or save_slots_screen.visible
 	)
 
 

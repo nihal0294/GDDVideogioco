@@ -10,12 +10,12 @@ const MEDAL_SLOT_COUNT: int = 8
 const MAX_PLAYER_NAME_LENGTH: int = 64
 const MAX_CURRENCY_NAME_LENGTH: int = 32
 const MAX_ADVENTURE_SUMMARY_LENGTH: int = 2048
-const MAX_FLORINS: int = 999999999
+const MAX_FLORINS: int = 999999
 const MAX_CAPTURE_COUNT: int = 999999
 
 @export var player_name: String = "Avventuriero"
 @export var currency_name: String = "Fiorini"
-@export_range(0, 999999999, 1) var florins: int = 0
+@export_range(0, 999999, 1) var florins: int = 0
 @export_range(0, 999999, 1) var captured_monster_count: int = 0
 @export_multiline var adventure_summary: String = (
 	"L'avventura è appena cominciata nella Valle Verde. "

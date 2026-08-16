@@ -1,6 +1,7 @@
 extends SceneTree
 
 const WATCHDOG_TIMEOUT_SECONDS := 45.0
+const BATTLE_TEST_RANDOM_SEED := 24680
 const BATTLE_SCENE: PackedScene = preload("res://game/battle/battle.tscn")
 const INVENTORY_SCENE: PackedScene = preload("res://game/inventory/inventory.tscn")
 const ASTRAL_ROSTER_SCENE: PackedScene = preload(
@@ -61,6 +62,7 @@ func _run() -> void:
 
 	_test_main_structure(main)
 	_test_wild_astral_pool(main)
+	_test_base_stat_rules()
 	_test_player_and_camera(main)
 	_test_world_map(main)
 	await _test_squad_screen(main)
@@ -69,7 +71,9 @@ func _run() -> void:
 	_test_astral_instance_progression()
 	_test_astral_sex_and_presentation()
 	await _test_astral_roster()
+	_test_element_chart_data()
 	_test_battle_math()
+	_test_move_damage_tiers()
 	await _test_encounter_wiring(main)
 	await _test_tall_grass_response(main)
 	await _test_battle_fight()
@@ -80,6 +84,8 @@ func _run() -> void:
 	await _test_battle_flee()
 	await _test_battle_switch()
 	await _test_battle_forced_switch()
+	await _test_trainers(main)
+	await _test_world_npcs(main)
 	_test_inventory_data()
 	_test_grimoire_profile_inputs()
 	_test_inputs()
@@ -280,6 +286,12 @@ func _test_options_and_save_system(main: Node) -> void:
 	_expect(game_ui.pause_menu.visible and paused, "Esc non apre e sospende il menu.")
 	var continue_button := game_ui.pause_menu.get_node_or_null("%ContinueButton") as Button
 	var options_button := game_ui.pause_menu.get_node_or_null("%OptionsButton") as Button
+	var formulas_button := game_ui.pause_menu.get_node_or_null(
+		"%DeveloperFormulasButton"
+	) as Button
+	var element_chart_button := game_ui.pause_menu.get_node_or_null(
+		"%ElementChartButton"
+	) as Button
 	var save_button := game_ui.pause_menu.get_node_or_null("%SaveButton") as Button
 	var load_button := game_ui.pause_menu.get_node_or_null("%LoadButton") as Button
 	_expect(
@@ -290,8 +302,13 @@ func _test_options_and_save_system(main: Node) -> void:
 		load_button != null and load_button.disabled,
 		"Carica non è disabilitato senza salvataggi."
 	)
-	if options_button == null or save_button == null:
-		_fail("Pulsanti Opzioni o Salva mancanti dal menu.")
+	if (
+		options_button == null
+		or formulas_button == null
+		or element_chart_button == null
+		or save_button == null
+	):
+		_fail("Pulsanti Opzioni, Formule, Elementi o Salva mancanti dal menu.")
 		_cleanup_test_save_directory(test_directory)
 		return
 
@@ -344,6 +361,92 @@ func _test_options_and_save_system(main: Node) -> void:
 		)
 	else:
 		_fail("Pulsante Indietro mancante nelle Opzioni.")
+
+	formulas_button.emit_signal("pressed")
+	await process_frame
+	_expect(
+		game_ui.developer_formulas_screen.visible
+		and not game_ui.pause_menu.visible
+		and paused,
+		"Formule sviluppatori non apre una schermata modale in pausa."
+	)
+	var formula_text := game_ui.developer_formulas_screen.get_node_or_null(
+		"%FormulaText"
+	) as RichTextLabel
+	_expect(
+		formula_text != null
+		and "217" in formula_text.text
+		and "255" in formula_text.text
+		and "10%" in formula_text.text
+		and "Mod1" in formula_text.text,
+		"Il riferimento sviluppatori non documenta la formula attiva."
+	)
+	var formulas_back := game_ui.developer_formulas_screen.get_node_or_null(
+		"%BackButton"
+	) as Button
+	if formulas_back != null:
+		formulas_back.emit_signal("pressed")
+		await process_frame
+		_expect(
+			game_ui.pause_menu.visible
+			and not game_ui.developer_formulas_screen.visible,
+			"Indietro dalle formule non torna al menu principale."
+		)
+	else:
+		_fail("Pulsante Indietro mancante nelle formule sviluppatori.")
+
+	element_chart_button.emit_signal("pressed")
+	await process_frame
+	_expect(
+		game_ui.element_chart_screen.visible
+		and not game_ui.pause_menu.visible
+		and paused,
+		"Tabella elementi non apre una schermata modale in pausa."
+	)
+	var chart_grid := game_ui.element_chart_screen.get_node_or_null(
+		"%ChartGrid"
+	) as GridContainer
+	_expect(
+		chart_grid != null
+		and chart_grid.columns == ElementChart.ELEMENT_IDS.size()
+		and chart_grid.get_child_count()
+		== ElementChart.ELEMENT_IDS.size() * ElementChart.ELEMENT_IDS.size(),
+		"La tabella elementi non contiene l'intera matrice."
+	)
+	var fire_diagonal := game_ui.element_chart_screen.get_chart_cell(
+		&"fuoco",
+		&"fuoco"
+	)
+	_expect(
+		fire_diagonal != null
+		and bool(fire_diagonal.get_meta(&"is_diagonal", false)),
+		"Il nome Fuoco non occupa la diagonale della tabella."
+	)
+	var nature_against_fire := game_ui.element_chart_screen.get_chart_cell(
+		&"natura",
+		&"fuoco"
+	)
+	_expect(
+		nature_against_fire != null
+		and is_equal_approx(
+			float(nature_against_fire.get_meta(&"multiplier", 0.0)),
+			0.5
+		),
+		"La cella Natura contro Fuoco non mostra la resistenza 1/2."
+	)
+	var chart_back := game_ui.element_chart_screen.get_node_or_null(
+		"%BackButton"
+	) as Button
+	if chart_back != null:
+		chart_back.emit_signal("pressed")
+		await process_frame
+		_expect(
+			game_ui.pause_menu.visible
+			and not game_ui.element_chart_screen.visible,
+			"Indietro dalla tabella elementi non torna al menu principale."
+		)
+	else:
+		_fail("Pulsante Indietro mancante nella tabella elementi.")
 
 	var active_astral := roster.get_active_astral()
 	if active_astral == null or active_astral.definition == null:
@@ -489,7 +592,8 @@ func _test_options_and_save_system(main: Node) -> void:
 		continue_button.emit_signal("pressed")
 		await process_frame
 		_expect(
-			player.global_position.is_equal_approx(Vector3(24.0, 8.0, 15.0)),
+			is_equal_approx(player.global_position.x, 24.0)
+			and is_equal_approx(player.global_position.z, 15.0),
 			"Continua non carica il salvataggio più recente."
 		)
 		_expect(not paused, "Continua non restituisce il controllo al mondo.")
@@ -544,6 +648,12 @@ func _test_wild_astral_pool(main: Node) -> void:
 	var actual_element_counts: Dictionary[StringName, int] = {}
 	var seen_ids: Dictionary[StringName, bool] = {}
 	var expected_cooldowns: Array[int] = [0, 1, 2, 3]
+	var expected_power_by_cooldown: Dictionary[int, int] = {
+		0: 300,
+		1: 350,
+		2: 475,
+		3: 600,
+	}
 	for candidate: Variant in pool:
 		var definition := candidate as AstralDefinition
 		if definition == null:
@@ -566,12 +676,30 @@ func _test_wild_astral_pool(main: Node) -> void:
 			definition.starting_moves.size() == 4,
 			"%s non possiede quattro mosse iniziali." % definition.display_name
 		)
+		_expect(
+			definition.has_valid_base_stats(),
+			"%s possiede statistiche base non valide." % definition.display_name
+		)
+		_expect(
+			definition.get_base_stat_total() == 400,
+			"%s non possiede il BST provvisorio di 400." % definition.display_name
+		)
 		var cooldowns: Array[int] = []
 		for move: AstralMoveDefinition in definition.starting_moves:
 			if move == null:
 				_fail("%s contiene una mossa null." % definition.display_name)
 				continue
 			cooldowns.append(move.cooldown_turns)
+			_expect(
+				move.power == expected_power_by_cooldown.get(
+					move.cooldown_turns,
+					-1
+				),
+				"%s non rispetta la potenza della fascia CD %d." % [
+					move.display_name,
+					move.cooldown_turns,
+				]
+			)
 		cooldowns.sort()
 		_expect(
 			cooldowns == expected_cooldowns,
@@ -588,6 +716,47 @@ func _test_wild_astral_pool(main: Node) -> void:
 		_expect(selected != null and pool.has(selected), "Main estrae una specie fuori dal pool.")
 	else:
 		_fail("Main non espone l'estrazione casuale dal pool selvatico.")
+
+
+func _test_base_stat_rules() -> void:
+	var definition := AstralDefinition.new()
+	_expect(
+		definition.set_base_stats(200, 200, 200, 200, 200, 200),
+		"AstralDefinition rifiuta un BST valido di 1200."
+	)
+	_expect(
+		definition.get_base_stat_total() == AstralDefinition.MAX_BASE_STAT_TOTAL,
+		"Il BST massimo non è 1200."
+	)
+	_expect(
+		not definition.set_base_stats(201, 200, 200, 200, 200, 200),
+		"AstralDefinition accetta un BST superiore a 1200."
+	)
+	_expect(
+		not definition.set_base_stats(4, 200, 200, 200, 200, 200),
+		"AstralDefinition accetta una statistica inferiore a 5."
+	)
+	_expect(
+		not definition.set_base_stats(256, 5, 5, 5, 5, 5),
+		"AstralDefinition accetta una statistica superiore a 255."
+	)
+	definition.max_health = 255
+	definition.attack_power = 255
+	definition.physical_defense = 255
+	definition.magic_attack = 255
+	definition.magic_defense = 255
+	definition.speed = 255
+	_expect(
+		definition.has_valid_base_stats()
+		and definition.get_base_stat_total() <= AstralDefinition.MAX_BASE_STAT_TOTAL,
+		"Le assegnazioni singole permettono di superare il BST massimo."
+	)
+
+	var starter := load("res://data/astrals/player_placeholder.tres") as AstralDefinition
+	_expect(starter != null, "Definizione dello starter mancante per il test BST.")
+	if starter != null:
+		_expect(starter.has_valid_base_stats(), "Lo starter possiede statistiche non valide.")
+		_expect(starter.get_base_stat_total() == 400, "Lo starter non possiede BST 400.")
 
 
 func _test_player_and_camera(main: Node) -> void:
@@ -634,11 +803,25 @@ func _test_squad_screen(main: Node) -> void:
 	var astral_list := squad_screen.get_node_or_null("%AstralList") as ItemList
 	var astral_name := squad_screen.get_node_or_null("%AstralName") as Label
 	var elements_value := squad_screen.get_node_or_null("%ElementsValue") as Label
+	var bst_value := squad_screen.get_node_or_null("%BstValue") as Label
+	var physical_defense_value := squad_screen.get_node_or_null(
+		"%PhysicalDefenseValue"
+	) as Label
+	var magic_attack_value := squad_screen.get_node_or_null(
+		"%MagicAttackValue"
+	) as Label
+	var magic_defense_value := squad_screen.get_node_or_null(
+		"%MagicDefenseValue"
+	) as Label
 	var level_value := squad_screen.get_node_or_null("%LevelValue") as Label
 	var experience_value := squad_screen.get_node_or_null("%ExperienceValue") as Label
 	_expect(astral_list != null, "Lista Astral mancante dalla schermata Squadra.")
 	_expect(astral_name != null, "Nome Astral mancante dalla schermata Squadra.")
 	_expect(elements_value != null, "Elemento Astral mancante dalla schermata Squadra.")
+	_expect(bst_value != null, "BST mancante dalla scheda Astral.")
+	_expect(physical_defense_value != null, "PDef mancante dalla scheda Astral.")
+	_expect(magic_attack_value != null, "Atkm mancante dalla scheda Astral.")
+	_expect(magic_defense_value != null, "MDef mancante dalla scheda Astral.")
 	_expect(level_value != null, "Livello mancante dalla scheda Astral.")
 	_expect(experience_value != null, "EXP mancante dalla scheda Astral.")
 	if astral_list != null:
@@ -676,6 +859,28 @@ func _test_squad_screen(main: Node) -> void:
 		)
 	if starter != null and starter.definition != null:
 		var expected_identity := ASTRAL_PRESENTATION.format_identity(starter)
+		if bst_value != null:
+			_expect(
+				bst_value.text.begins_with(
+					str(starter.definition.get_base_stat_total())
+				),
+				"La scheda Squadra mostra un BST errato."
+			)
+		if physical_defense_value != null:
+			_expect(
+				physical_defense_value.text == str(starter.definition.physical_defense),
+				"La scheda Squadra mostra una PDef errata."
+			)
+		if magic_attack_value != null:
+			_expect(
+				magic_attack_value.text == str(starter.definition.magic_attack),
+				"La scheda Squadra mostra un Atkm errato."
+			)
+		if magic_defense_value != null:
+			_expect(
+				magic_defense_value.text == str(starter.definition.magic_defense),
+				"La scheda Squadra mostra una MDef errata."
+			)
 		if astral_name != null:
 			_expect(
 				astral_name.text == expected_identity,
@@ -1003,6 +1208,62 @@ func _test_astral_roster() -> void:
 	await process_frame
 
 
+func _test_element_chart_data() -> void:
+	_expect(
+		ElementChart.ELEMENT_IDS.size() == 18,
+		"La tabella non contiene tutti i 18 elementi documentati."
+	)
+	var unique_ids: Dictionary[StringName, bool] = {}
+	var allowed_values: Array[float] = [0.25, 0.5, 1.0, 2.0, 4.0]
+	for attacking_element: StringName in ElementChart.ELEMENT_IDS:
+		_expect(
+			not unique_ids.has(attacking_element),
+			"Elemento duplicato nella tabella: %s." % attacking_element
+		)
+		unique_ids[attacking_element] = true
+		for defending_element: StringName in ElementChart.ELEMENT_IDS:
+			var multiplier := ElementChart.get_multiplier(
+				attacking_element,
+				defending_element
+			)
+			_expect(
+				allowed_values.has(multiplier),
+				"Moltiplicatore non supportato: %s contro %s = %s."
+				% [attacking_element, defending_element, multiplier]
+			)
+	_expect(
+		is_equal_approx(ElementChart.get_multiplier(&"acqua", &"fuoco"), 2.0)
+		and is_equal_approx(ElementChart.get_multiplier(&"natura", &"fuoco"), 0.5),
+		"Debolezza e resistenza base di Fuoco sono errate."
+	)
+	_expect(
+		is_equal_approx(ElementChart.get_multiplier(&"gelo", &"fuoco"), 2.0)
+		and is_equal_approx(ElementChart.get_multiplier(&"fuoco", &"gelo"), 2.0),
+		"La normalizzazione documentale Fuoco/Gelo e errata."
+	)
+	_expect(
+		is_equal_approx(ElementChart.get_multiplier(&"fatato", &"natura"), 0.25)
+		and is_equal_approx(ElementChart.get_multiplier(&"terra", &"aria"), 0.25),
+		"Le immunita documentate non sono rese come forte resistenza 1/4."
+	)
+	var dual_defense: Array[StringName] = [&"fuoco", &"terra"]
+	_expect(
+		is_equal_approx(
+			ElementChart.get_combined_multiplier(&"acqua", dual_defense),
+			4.0
+		),
+		"Due debolezze non producono l'iperefficacia 4."
+	)
+	_expect(
+		ElementChart.get_multiplier_label(0.25) == "1/4"
+		and ElementChart.get_multiplier_label(0.5) == "1/2"
+		and ElementChart.get_multiplier_label(1.0) == "1"
+		and ElementChart.get_multiplier_label(2.0) == "2"
+		and ElementChart.get_multiplier_label(4.0) == "4",
+		"Le etichette della legenda elementi sono errate."
+	)
+
+
 func _test_battle_math() -> void:
 	var nature_move := _make_test_move(&"nature_math", "Nature Math", 10, &"natura")
 	var fire_move := _make_test_move(&"fire_math", "Fire Math", 10, &"fuoco")
@@ -1040,26 +1301,33 @@ func _test_battle_math() -> void:
 		30,
 		moves
 	)
+	nature_definition.set_base_stats(100, 80, 50, 20, 50, 30)
+	fire_definition.set_base_stats(100, 20, 40, 60, 60, 30)
+	water_definition.set_base_stats(100, 80, 50, 20, 50, 30)
 	var nature_attacker := _make_test_astral_instance(nature_definition, 10)
 	var fire_defender := _make_test_astral_instance(fire_definition, 5)
 	var no_stab_attacker := _make_test_astral_instance(water_definition, 10)
 	var lower_level_attacker := _make_test_astral_instance(nature_definition, 5)
-	var higher_level_defender := _make_test_astral_instance(fire_definition, 10)
+	var higher_level_attacker := _make_test_astral_instance(nature_definition, 30)
 	_expect(
-		BattleMath.calculate_damage(nature_attacker, fire_defender, nature_move) == 22,
-		"BattleMath non applica correttamente livello, STAB e resistenza natura-fuoco."
+		BattleMath.calculate_damage(nature_attacker, fire_defender, nature_move) == 3,
+		"BattleMath non applica la formula fisica con STAB e resistenza."
 	)
 	_expect(
-		BattleMath.calculate_damage(no_stab_attacker, fire_defender, nature_move) == 14,
+		BattleMath.calculate_damage(no_stab_attacker, fire_defender, nature_move) == 2,
 		"BattleMath applica STAB a un elemento non posseduto."
 	)
 	_expect(
 		BattleMath.calculate_damage(
-			lower_level_attacker,
-			higher_level_defender,
+			higher_level_attacker,
+			fire_defender,
 			nature_move
-		) == 12,
-		"BattleMath ignora il rapporto tra livello attaccante e difensore."
+		) > BattleMath.calculate_damage(
+			lower_level_attacker,
+			fire_defender,
+			nature_move
+		),
+		"Il livello dell'attaccante non aumenta il danno."
 	)
 	_expect(
 		is_equal_approx(
@@ -1104,14 +1372,203 @@ func _test_battle_math() -> void:
 	var fire_attacker := _make_test_astral_instance(fire_definition, 10)
 	var nature_defender := _make_test_astral_instance(nature_definition, 5)
 	_expect(
-		BattleMath.calculate_damage(fire_attacker, nature_defender, fire_move) == 88,
+		BattleMath.calculate_damage(fire_attacker, nature_defender, fire_move) == 6,
 		"BattleMath non combina STAB e superefficacia."
+	)
+
+	var physical_move := _make_test_move(
+		&"physical_math",
+		"Physical Math",
+		20,
+		&"neutro",
+		AstralMoveDefinition.DamageClass.PHYSICAL
+	)
+	var magical_move := _make_test_move(
+		&"magical_math",
+		"Magical Math",
+		20,
+		&"neutro",
+		AstralMoveDefinition.DamageClass.MAGICAL
+	)
+	var mixed_moves: Array[AstralMoveDefinition] = [physical_move, magical_move]
+	var mixed_attacker_definition := _make_test_astral_definition(
+		&"mixed_attacker",
+		"Mixed Attacker",
+		100,
+		20,
+		30,
+		&"acqua",
+		&"",
+		20,
+		mixed_moves
+	)
+	var mixed_defender_definition := _make_test_astral_definition(
+		&"mixed_defender",
+		"Mixed Defender",
+		100,
+		20,
+		30,
+		&"natura",
+		&"",
+		20,
+		mixed_moves
+	)
+	mixed_attacker_definition.set_base_stats(100, 20, 40, 100, 40, 30)
+	mixed_defender_definition.set_base_stats(100, 40, 100, 40, 20, 30)
+	var mixed_attacker := _make_test_astral_instance(mixed_attacker_definition, 10)
+	var mixed_defender := _make_test_astral_instance(mixed_defender_definition, 10)
+	_expect(
+		BattleMath.calculate_damage(mixed_attacker, mixed_defender, physical_move) == 2,
+		"La mossa fisica non usa Atk e PDef."
+	)
+	_expect(
+		BattleMath.calculate_damage(mixed_attacker, mixed_defender, magical_move) == 14,
+		"La mossa magica non usa Atkm e MDef."
+	)
+
+	var scaling_modifiers := BattleMath.DamageModifiers.new()
+	scaling_modifiers.attack_stat_modifier = 3.0
+	var scaled_result := BattleMath.calculate_damage_result(
+		mixed_attacker,
+		mixed_defender,
+		magical_move,
+		false,
+		BattleMath.RANDOM_ROLL_MAXIMUM,
+		scaling_modifiers
+	)
+	_expect(
+		scaled_result.effective_attack == 75
+		and scaled_result.effective_defense == 5,
+		"A > 255 non divide A e D per quattro con floor."
+	)
+	var critical_result := BattleMath.calculate_damage_result(
+		mixed_attacker,
+		mixed_defender,
+		magical_move,
+		true,
+		BattleMath.RANDOM_ROLL_MAXIMUM,
+		scaling_modifiers
+	)
+	_expect(
+		critical_result.effective_attack == 100
+		and critical_result.effective_defense == 20
+		and critical_result.is_critical_hit,
+		"Il brutto colpo non ignora i modificatori delle statistiche."
+	)
+	var one_damage_modifiers := BattleMath.DamageModifiers.new()
+	one_damage_modifiers.modifier_2 = 0.5
+	_expect(
+		BattleMath.calculate_damage(
+			mixed_attacker,
+			mixed_defender,
+			physical_move,
+			false,
+			BattleMath.RANDOM_ROLL_MINIMUM,
+			one_damage_modifiers
+		) == 1,
+		"Random riduce un danno pre-Random pari a uno."
+	)
+	_expect(
+		is_equal_approx(BattleMath.CRITICAL_HIT_CHANCE, 0.10),
+		"La probabilita base di brutto colpo non e il 10%."
+	)
+	var damage_rng := RandomNumberGenerator.new()
+	damage_rng.seed = 97531
+	var observed_critical := false
+	var observed_normal := false
+	for _roll_index: int in 200:
+		var rolled_result := BattleMath.roll_damage(
+			mixed_attacker,
+			mixed_defender,
+			magical_move,
+			damage_rng
+		)
+		_expect(
+			rolled_result.random_roll >= BattleMath.RANDOM_ROLL_MINIMUM
+			and rolled_result.random_roll <= BattleMath.RANDOM_ROLL_MAXIMUM,
+			"Il tiro casuale del danno esce dall'intervallo 217-255."
+		)
+		observed_critical = observed_critical or rolled_result.is_critical_hit
+		observed_normal = observed_normal or not rolled_result.is_critical_hit
+	_expect(
+		observed_critical and observed_normal,
+		"Il tiro deterministico non copre esiti critici e normali."
 	)
 	var defeated_for_reward := _make_test_astral_instance(fire_definition, 7)
 	_expect(
 		BattleMath.calculate_experience_reward(defeated_for_reward) == 56,
 		"BattleMath calcola una ricompensa EXP errata."
 	)
+
+
+func _test_move_damage_tiers() -> void:
+	var tier_moves: Array[AstralMoveDefinition] = [
+		load("res://data/moves/impatto_astrale.tres") as AstralMoveDefinition,
+		load("res://data/moves/frusta_di_liane.tres") as AstralMoveDefinition,
+		load("res://data/moves/lamafoglia.tres") as AstralMoveDefinition,
+		load("res://data/moves/assalto_radice.tres") as AstralMoveDefinition,
+	]
+	var attacker_definition := _make_test_astral_definition(
+		&"damage_tier_attacker",
+		"Damage Tier Attacker",
+		100,
+		50,
+		50,
+		&"natura",
+		&"",
+		10,
+		tier_moves
+	)
+	var defender_definition := _make_test_astral_definition(
+		&"damage_tier_defender",
+		"Damage Tier Defender",
+		100,
+		50,
+		50,
+		&"neutro",
+		&"",
+		10,
+		tier_moves
+	)
+	var attacker := _make_test_astral_instance(attacker_definition, 5)
+	var defender := _make_test_astral_instance(defender_definition, 5)
+	var expected_ranges: Array[Vector2i] = [
+		Vector2i(20, 35),
+		Vector2i(30, 50),
+		Vector2i(45, 65),
+		Vector2i(60, 80),
+	]
+	for move_index: int in tier_moves.size():
+		var move := tier_moves[move_index]
+		_expect(move != null, "Mossa bilanciamento mancante all'indice %d." % move_index)
+		if move == null:
+			continue
+		var minimum_damage := BattleMath.calculate_damage(
+			attacker,
+			defender,
+			move,
+			false,
+			BattleMath.RANDOM_ROLL_MINIMUM
+		)
+		var maximum_damage := BattleMath.calculate_damage(
+			attacker,
+			defender,
+			move,
+			false,
+			BattleMath.RANDOM_ROLL_MAXIMUM
+		)
+		var expected_range := expected_ranges[move_index]
+		_expect(
+			minimum_damage >= expected_range.x
+			and maximum_damage <= expected_range.y,
+			"La fascia CD %d produce %d-%d danni invece di %d-%d." % [
+				move.cooldown_turns,
+				minimum_damage,
+				maximum_damage,
+				expected_range.x,
+				expected_range.y,
+			]
+		)
 
 
 func _test_world_map(main: Node) -> void:
@@ -1365,6 +1822,7 @@ func _create_battle_fixture() -> Dictionary:
 	battle.action_delay = 0.0
 	battle.battle_finished.connect(_on_test_battle_finished)
 	battle.setup(inventory, roster, WILD_ASTRAL)
+	battle.set_damage_random_seed(BATTLE_TEST_RANDOM_SEED)
 	battle.begin()
 	var command_ready := await _wait_for_battle_state(
 		battle,
@@ -1434,16 +1892,20 @@ func _test_battle_fight() -> void:
 	var initial_player_health := player_astral.current_health
 	var initial_wild_health := wild_astral.current_health
 	var initial_experience := player_astral.experience
-	var expected_player_damage := BattleMath.calculate_damage(
+	var expected_damage_rng := RandomNumberGenerator.new()
+	expected_damage_rng.seed = BATTLE_TEST_RANDOM_SEED
+	var expected_player_damage := BattleMath.roll_damage(
 		player_astral,
 		wild_astral,
-		player_move
-	)
-	var expected_counterattack := BattleMath.calculate_damage(
+		player_move,
+		expected_damage_rng
+	).damage
+	var expected_counterattack := BattleMath.roll_damage(
 		wild_astral,
 		player_astral,
-		wild_move
-	)
+		wild_move,
+		expected_damage_rng
+	).damage
 	battle.choose_fight()
 	_expect(
 		battle.get_state() == BattleController.BattleState.MOVES,
@@ -1540,6 +2002,7 @@ func _test_battle_cooldowns_and_presentation() -> void:
 	var cooldown_three_index := cooldown_indices[3]
 	var cooldown_zero_index := cooldown_indices[0]
 	player_astral.current_health = 999
+	wild_astral.current_health = 999
 	battle.choose_move(cooldown_three_index)
 	_expect(
 		battle.get_player_turn_index() == 2,
@@ -1863,11 +2326,14 @@ func _test_battle_switch() -> void:
 	var previous_health := previous_active.current_health
 	var reserve_health := reserve.current_health
 	var reserve_experience := reserve.experience
-	var expected_counterattack := BattleMath.calculate_damage(
+	var expected_damage_rng := RandomNumberGenerator.new()
+	expected_damage_rng.seed = BATTLE_TEST_RANDOM_SEED
+	var expected_counterattack := BattleMath.roll_damage(
 		wild_astral,
 		reserve,
-		wild_move
-	)
+		wild_move,
+		expected_damage_rng
+	).damage
 
 	battle.choose_switch()
 	_expect(
@@ -1963,6 +2429,343 @@ func _test_battle_forced_switch() -> void:
 		"Il KO alleato o il cambio forzato assegna EXP."
 	)
 	await _cleanup_battle_fixture(fixture)
+
+
+func _test_trainers(main: Node) -> void:
+	var world_map := main.get_node_or_null("WorldMap") as VerdantValley
+	var player := main.get_node_or_null("Player") as CharacterBody3D
+	var inventory := main.get_node_or_null("Inventory") as Inventory
+	var profile := main.get_node_or_null("PlayerProfile") as PlayerProfile
+	var battle_host := main.get_node_or_null("BattleHost") as Node
+	var game_ui := main.get_node_or_null("GameUI") as GameUI
+	if (
+		world_map == null
+		or player == null
+		or inventory == null
+		or profile == null
+		or battle_host == null
+		or game_ui == null
+	):
+		_fail("Impossibile verificare gli allenatori nella scena Main.")
+		return
+	var trainers := world_map.get_trainers()
+	_expect(trainers.size() == 4, "La Valle non contiene quattro allenatori.")
+	if trainers.size() != 4:
+		return
+	var expected_lines: Array[String] = [
+		"Magliettina di Prada. Leggera.. mica tarocca eh! Originale!",
+		"Te dovevi vedere l'altra sera! Avevo fumato ero di un in botta che tu non puoi capire! Uno Svarione! Ma un fuorismo Ganjalf!",
+		"Sta zitto marylin Manson.. Sbaraccati fuori dai coglioni e va a mangiare un pipistrello in camera tua!!",
+		"Dovevo ascoltare mio nonno, me l'aveva anche detto lui di non andare.. E io invece.. Sempre dietro come un Coglione!",
+	]
+	var trainer_ids: Dictionary[StringName, bool] = {}
+	var trainer_positions: Array[Vector2] = []
+	for trainer_index: int in trainers.size():
+		var trainer := trainers[trainer_index]
+		_expect(trainer is NpcCharacter, "TrainerNpc non deriva da NpcCharacter.")
+		_expect(
+			trainer.challenge_line == expected_lines[trainer_index],
+			"Frase errata per l'allenatore %d." % (trainer_index + 1)
+		)
+		_expect(
+			trainer.astral_definition != null and trainer.astral_level == 5,
+			"L'allenatore %d non possiede un Astral di livello 5."
+			% (trainer_index + 1)
+		)
+		_expect(
+			not trainer_ids.has(trainer.npc_id),
+			"Due allenatori condividono lo stesso npc_id."
+		)
+		trainer_ids[trainer.npc_id] = true
+		var position_2d := Vector2(trainer.position.x, trainer.position.z)
+		trainer_positions.append(position_2d)
+		_expect(
+			absf(trainer.position.x - world_map.get_path_center_x(trainer.position.z))
+			<= 1.4,
+			"Un allenatore non si trova nella fascia libera del sentiero."
+		)
+		_expect(
+			absf(
+				trainer.position.y
+				- world_map.get_terrain_height(trainer.position.x, trainer.position.z)
+				- 0.08
+			) < 0.2,
+			"Un allenatore non poggia correttamente sul terreno."
+		)
+		_expect(
+			trainer.get_node_or_null("CollisionShape3D") is CollisionShape3D,
+			"Un allenatore non possiede collisione fisica."
+		)
+	for first_index: int in trainer_positions.size():
+		for second_index: int in range(first_index + 1, trainer_positions.size()):
+			_expect(
+				trainer_positions[first_index].distance_to(
+					trainer_positions[second_index]
+				) > 6.0,
+				"Due allenatori sono stati generati troppo vicini."
+			)
+
+	var trainer: TrainerNpc = trainers.front() as TrainerNpc
+	trainer.dialogue_duration = 0.05
+	trainer.movement_speed = 10.0
+	var forward: Vector3 = -trainer.global_transform.basis.z
+	forward.y = 0.0
+	forward = forward.normalized()
+	var challenge_position: Vector3 = trainer.global_position + forward * 3.0
+	challenge_position.y = world_map.get_terrain_height(
+		challenge_position.x,
+		challenge_position.z
+	) + 1.15
+	player.global_position = challenge_position
+	player.velocity = Vector3.ZERO
+	await physics_frame
+	_expect(
+		not trainer.can_see_player(),
+		"L'allenatore ingaggia un giocatore immobile."
+	)
+	player.velocity = forward
+	_expect(
+		trainer.can_see_player(),
+		"Campo visivo o raycast non rileva il giocatore in movimento."
+	)
+	var previous_fade_duration := float(main.get("battle_fade_duration"))
+	main.set("battle_fade_duration", 0.0)
+	var initial_florins := profile.florins
+	var initial_item_quantity := inventory.get_quantity(trainer.reward_item_id)
+	var reward_item := inventory.get_item_definition(trainer.reward_item_id)
+	var expected_received_items := 0
+	if reward_item != null:
+		expected_received_items = mini(
+			trainer.reward_item_amount,
+			reward_item.max_quantity - initial_item_quantity
+		)
+	await physics_frame
+	_expect(
+		player.has_method("has_movement_lock")
+		and bool(player.call("has_movement_lock", &"trainer_challenge")),
+		"La sfida non blocca immediatamente il movimento del giocatore."
+	)
+	var dialogue_seen := false
+	for _frame_index: int in 180:
+		if trainer.challenge_line == game_ui.notification_toast.current_message:
+			dialogue_seen = true
+		if battle_host.get_child_count() > 0:
+			break
+		await process_frame
+		await physics_frame
+	_expect(dialogue_seen, "La frase dell'allenatore non viene mostrata.")
+	var battle := await _wait_for_battle(battle_host, 180)
+	_expect(battle != null, "La sfida allenatore non avvia BattleController.")
+	if battle != null:
+		battle.action_delay = 0.0
+		var command_ready := await _wait_for_battle_state(
+			battle,
+			BattleController.BattleState.COMMAND,
+			120
+		)
+		_expect(command_ready, "La battaglia allenatore non raggiunge COMMAND.")
+		_expect(battle.is_trainer_battle(), "Battle non riconosce la sfida allenatore.")
+		var opponent := battle.get_wild_astral()
+		_expect(
+			opponent != null
+			and opponent.definition == trainer.astral_definition
+			and opponent.level == 5,
+			"La battaglia usa un Astral allenatore errato."
+		)
+		_expect(
+			battle.capture_button.disabled and battle.flee_button.disabled,
+			"Cattura o Fuggi sono disponibili contro un allenatore."
+		)
+		var roster: AstralRoster = main.get_node("AstralRoster") as AstralRoster
+		var roster_count: int = roster.get_astral_count()
+		battle.choose_capture()
+		battle.choose_flee()
+		_expect(
+			battle.get_state() == BattleController.BattleState.COMMAND
+			and roster.get_astral_count() == roster_count,
+			"Una sfida allenatore permette cattura o fuga via API."
+		)
+		if opponent != null:
+			opponent.current_health = 1
+		battle.choose_fight()
+		battle.choose_move(0)
+		var battle_closed := await _wait_for_battle_close(
+			battle_host,
+			game_ui,
+			180
+		)
+		_expect(battle_closed, "La vittoria non chiude la sfida allenatore.")
+	else:
+		main.call("_set_player_movement_locked", false)
+		game_ui.set_pause_lock(&"battle", false)
+	_expect(trainer.defeated, "L'allenatore sconfitto resta sfidabile.")
+	_expect(
+		profile.florins == initial_florins + trainer.reward_florins,
+		"La vittoria non assegna i Fiorini previsti."
+	)
+	_expect(
+		inventory.get_quantity(trainer.reward_item_id)
+		== initial_item_quantity + expected_received_items,
+		"La vittoria non assegna correttamente l'oggetto premio."
+	)
+	_expect(
+		not bool(player.call("has_movement_lock", &"trainer_challenge")),
+		"Il movimento resta bloccato dopo la battaglia."
+	)
+	var trainer_save_data := world_map.get_trainer_save_data()
+	_expect(
+		bool(
+			(trainer_save_data.get(String(trainer.npc_id), {}) as Dictionary).get(
+				"defeated",
+				false
+			)
+		),
+		"La sconfitta dell'allenatore non entra nei dati di salvataggio."
+	)
+	trainer.load_save_data({"defeated": false})
+	world_map.load_trainer_save_data(trainer_save_data)
+	_expect(trainer.defeated, "Il salvataggio non ripristina l'allenatore sconfitto.")
+	main.set("battle_fade_duration", previous_fade_duration)
+	player.velocity = Vector3.ZERO
+	player.global_position = world_map.get_spawn_position()
+
+
+func _test_world_npcs(main: Node) -> void:
+	var world_map := main.get_node_or_null("WorldMap") as VerdantValley
+	var player := main.get_node_or_null("Player") as CharacterBody3D
+	var profile := main.get_node_or_null("PlayerProfile") as PlayerProfile
+	var game_ui := main.get_node_or_null("GameUI") as GameUI
+	if world_map == null or player == null or profile == null or game_ui == null:
+		_fail("Impossibile verificare gli NPC della Valle Verde.")
+		return
+	var npcs: Array[WorldNpc] = world_map.get_world_npcs()
+	_expect(npcs.size() == 2, "La Valle non contiene esattamente due NPC statici.")
+	if npcs.size() != 2:
+		return
+	var first_npc: WorldNpc = npcs[0]
+	var gift_npc: WorldNpc = npcs[1]
+	_expect(
+		first_npc is NpcCharacter,
+		"Il primo abitante non usa la gerarchia NPC corretta."
+	)
+	_expect(
+		gift_npc is NpcCharacter,
+		"Il secondo abitante non usa la gerarchia NPC corretta."
+	)
+	_expect(
+		first_npc.global_position.distance_to(gift_npc.global_position) < 3.0,
+		"I due NPC non sono stati collocati uno accanto all'altro."
+	)
+	_expect(
+		"Ai miei tempi" in first_npc.dialogue_line,
+		"Il primo NPC non possiede il dialogo nostalgico richiesto."
+	)
+	_expect(
+		gift_npc.florins_gift == 200,
+		"Il secondo NPC non offre 200 Fiorini."
+	)
+	for npc: WorldNpc in npcs:
+		_expect(
+			npc.get_node_or_null("CollisionShape3D") is CollisionShape3D,
+			"Un NPC non possiede una collisione fisica."
+		)
+		_expect(
+			npc.interaction_area.collision_layer == 4,
+			"Un NPC non usa il layer delle interazioni."
+		)
+		npc.dialogue_duration = 0.05
+
+	var detector := player.get_node_or_null(
+		"InteractionDetector"
+	) as PlayerInteractionDetector
+	_expect(detector != null, "PlayerInteractionDetector mancante per gli NPC.")
+	if detector == null:
+		return
+	var first_interaction_position := first_npc.global_position + Vector3.LEFT * 1.35
+	first_interaction_position.y = world_map.get_terrain_height(
+		first_interaction_position.x,
+		first_interaction_position.z
+	) + 1.15
+	player.global_position = first_interaction_position
+	player.velocity = Vector3.ZERO
+	await physics_frame
+	await physics_frame
+	_expect(
+		detector.current_target == first_npc.interaction_area,
+		"Il player non rileva il primo NPC come bersaglio interagibile."
+	)
+	_expect(detector.try_interact(), "Interazione con il primo NPC non riuscita.")
+	_expect(
+		player.has_movement_lock(&"npc_dialogue"),
+		"Il dialogo NPC non blocca il movimento del giocatore."
+	)
+	_expect(
+		game_ui.notification_toast.current_message == first_npc.dialogue_line,
+		"Il riquadro non mostra il dialogo del primo NPC."
+	)
+	for _frame_index: int in 8:
+		await physics_frame
+	_expect(
+		not player.has_movement_lock(&"npc_dialogue"),
+		"Il movimento resta bloccato dopo la fine del dialogo NPC."
+	)
+
+	var gift_interaction_position := gift_npc.global_position + Vector3.RIGHT * 1.35
+	gift_interaction_position.y = world_map.get_terrain_height(
+		gift_interaction_position.x,
+		gift_interaction_position.z
+	) + 1.15
+	player.global_position = gift_interaction_position
+	player.velocity = Vector3.ZERO
+	await physics_frame
+	await physics_frame
+	_expect(
+		detector.current_target == gift_npc.interaction_area,
+		"Il player non rileva il secondo NPC come bersaglio interagibile."
+	)
+	var initial_florins := profile.florins
+	_expect(detector.try_interact(), "Interazione con l'NPC benefattore non riuscita.")
+	_expect(
+		profile.florins == mini(
+			initial_florins + 200,
+			PlayerProfile.MAX_FLORINS
+		),
+		"Il dono dell'NPC non rispetta quantità o limite dei Fiorini."
+	)
+	_expect(
+		game_ui.notification_toast.has_pending_message("200 Fiorini"),
+		"Il dono di Fiorini non viene comunicato al giocatore."
+	)
+	var florins_after_gift := profile.florins
+	for _frame_index: int in 8:
+		await physics_frame
+	_expect(detector.try_interact(), "Il secondo dialogo con l'NPC non riesce.")
+	_expect(
+		profile.florins == florins_after_gift,
+		"L'NPC regala più volte gli stessi Fiorini."
+	)
+	for _frame_index: int in 8:
+		await physics_frame
+
+	var npc_save_data := world_map.get_npc_save_data()
+	gift_npc.load_save_data({"gift_claimed": false})
+	_expect(not gift_npc.gift_claimed, "Reset fixture NPC non riuscito.")
+	world_map.load_npc_save_data(npc_save_data)
+	_expect(
+		gift_npc.gift_claimed,
+		"Lo stato del dono NPC non viene ripristinato dal salvataggio."
+	)
+	var capped_profile := PlayerProfile.new()
+	capped_profile.florins = PlayerProfile.MAX_FLORINS - 50
+	_expect(capped_profile.add_florins(200), "Il profilo rifiuta un dono parziale.")
+	_expect(
+		capped_profile.florins == PlayerProfile.MAX_FLORINS,
+		"Il cap dei Fiorini non è 999999."
+	)
+	capped_profile.free()
+	player.global_position = world_map.get_spawn_position()
+	player.velocity = Vector3.ZERO
+	await physics_frame
 
 
 func _test_tall_grass_response(main: Node) -> void:
@@ -2081,6 +2884,10 @@ func _test_inputs() -> void:
 	_expect(InputMap.has_action("move_right"), "Input move_right mancante.")
 	_expect(InputMap.has_action("jump"), "Input jump mancante.")
 	_expect(InputMap.has_action("interact"), "Input interact mancante.")
+	_expect(
+		_action_uses_physical_key(&"interact", KEY_E),
+		"L'interazione con gli NPC non usa il tasto fisico E."
+	)
 	_expect(InputMap.has_action("toggle_inventory"), "Input inventario mancante.")
 	_expect(InputMap.has_action("toggle_menu"), "Input menu pausa mancante.")
 	_expect(InputMap.has_action("toggle_squad"), "Input Squadra mancante.")
@@ -2102,7 +2909,8 @@ func _make_test_move(
 	move_id: StringName,
 	display_name: String,
 	power: int,
-	element_id: StringName
+	element_id: StringName,
+	damage_class: int = AstralMoveDefinition.DamageClass.PHYSICAL
 ) -> AstralMoveDefinition:
 	var move := AstralMoveDefinition.new()
 	move.move_id = move_id
@@ -2110,6 +2918,7 @@ func _make_test_move(
 	move.description = "Mossa deterministica per lo smoke test."
 	move.power = power
 	move.element_id = element_id
+	move.damage_class = damage_class
 	return move
 
 
@@ -2128,9 +2937,14 @@ func _make_test_astral_definition(
 	definition.astral_id = astral_id
 	definition.display_name = display_name
 	definition.description = "Astral deterministico per lo smoke test."
-	definition.max_health = max_health
-	definition.attack_power = attack_power
-	definition.speed = speed
+	definition.set_base_stats(
+		max_health,
+		attack_power,
+		50,
+		attack_power,
+		50,
+		speed
+	)
 	definition.primary_element = primary_element
 	definition.secondary_element = secondary_element
 	definition.experience_yield = experience_yield

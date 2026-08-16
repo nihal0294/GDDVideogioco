@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://game/ui/game_ui.gd" id="1_game_ui"]
 [ext_resource type="PackedScene" path="res://game/ui/menu/pause_menu.tscn" id="2_pause_menu"]
@@ -9,6 +9,8 @@
 [ext_resource type="PackedScene" path="res://game/ui/player_profile/player_profile_screen.tscn" id="7_profile"]
 [ext_resource type="PackedScene" path="res://game/ui/options/options_screen.tscn" id="8_options"]
 [ext_resource type="PackedScene" path="res://game/ui/save/save_slots_screen.tscn" id="9_save_slots"]
+[ext_resource type="PackedScene" path="res://game/ui/developer/developer_formulas_screen.tscn" id="10_developer_formulas"]
+[ext_resource type="PackedScene" path="res://game/ui/elements/element_chart_screen.tscn" id="11_element_chart"]
 
 [node name="GameUI" type="CanvasLayer"]
 process_mode = 3
@@ -18,6 +20,10 @@ script = ExtResource("1_game_ui")
 [node name="PauseMenu" parent="." instance=ExtResource("2_pause_menu")]
 
 [node name="OptionsScreen" parent="." instance=ExtResource("8_options")]
+
+[node name="DeveloperFormulasScreen" parent="." instance=ExtResource("10_developer_formulas")]
+
+[node name="ElementChartScreen" parent="." instance=ExtResource("11_element_chart")]
 
 [node name="SaveSlotsScreen" parent="." instance=ExtResource("9_save_slots")]
 

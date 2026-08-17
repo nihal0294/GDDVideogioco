@@ -4,19 +4,25 @@ extends RefCounted
 const DEFAULT_ELEMENT: StringName = &"neutro"
 
 const ELEMENT_SYMBOLS: Dictionary[StringName, String] = {
-	&"natura": "🍃",
+	&"neutro": "✦",
 	&"fuoco": "🔥",
 	&"acqua": "💧",
-	&"neutro": "✦",
+	&"natura": "🍃",
+	&"aria": "≋",
+	&"terra": "◆",
+	&"elettro": "⚡",
+	&"luce": "☀",
+	&"ombra": "◐",
+	&"cosmico": "✺",
+	&"insetto": "⬡",
+	&"sintetico": "⚙",
+	&"lotta": "✊",
+	&"fatato": "✧",
+	&"arcano": "◇",
+	&"etereo": "☽",
+	&"gelo": "❄",
+	&"veleno": "☠",
 }
-
-const ELEMENT_NAMES: Dictionary[StringName, String] = {
-	&"natura": "Natura",
-	&"fuoco": "Fuoco",
-	&"acqua": "Acqua",
-	&"neutro": "Neutro",
-}
-
 
 static func get_element_symbol(element_id: StringName) -> String:
 	var normalized_element := (
@@ -29,10 +35,7 @@ static func get_element_name(element_id: StringName) -> String:
 	var normalized_element := (
 		DEFAULT_ELEMENT if element_id.is_empty() else element_id
 	)
-	return ELEMENT_NAMES.get(
-		normalized_element,
-		String(normalized_element).replace("_", " ").capitalize()
-	)
+	return ElementChart.get_display_name(normalized_element)
 
 
 static func format_element(element_id: StringName) -> String:

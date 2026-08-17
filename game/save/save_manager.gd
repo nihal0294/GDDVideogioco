@@ -5,6 +5,7 @@ signal save_created(slot_index: int)
 signal game_loaded(slot_index: int)
 signal operation_failed(message: String)
 signal slots_changed
+signal map_change_requested(map_id: StringName)
 
 const SAVE_VERSION: int = 1
 const MAX_SAVE_SLOTS: int = 10
@@ -38,6 +39,10 @@ func setup(
 	slots_changed.emit()
 
 
+func set_world_map(world_map: Node3D) -> void:
+	_world_map = world_map
+
+
 func set_save_directory(path: String) -> bool:
 	var normalized := path.strip_edges().trim_suffix("/")
 	if not normalized.begins_with("user://") or ".." in normalized:
@@ -52,6 +57,10 @@ func set_save_directory(path: String) -> bool:
 
 func get_save_directory() -> String:
 	return save_directory
+
+
+func get_current_map_id() -> StringName:
+	return _get_map_id()
 
 
 func get_slot_path(slot_index: int) -> String:
@@ -152,8 +161,15 @@ func load_save(slot_index: int) -> bool:
 	var data := _read_slot_data(slot_index, true)
 	if data.is_empty() or not _validate_payload(data):
 		return false
+	var world_data := data.get("world", {}) as Dictionary
+	var saved_map_id := StringName(world_data.get("map_id", &""))
+	if not saved_map_id.is_empty() and saved_map_id != _get_map_id():
+		map_change_requested.emit(saved_map_id)
+		if _get_map_id() != _normalize_legacy_map_id(saved_map_id):
+			_report_failure("La mappa del salvataggio non è disponibile.")
+			return false
 
-	var roster_data := data.get("astrals", []) as Array
+	var roster_data: Variant = data.get("astrals", [])
 	if not _roster.load_save_data(roster_data):
 		_report_failure("Il salvataggio non contiene una squadra valida.")
 		return false
@@ -161,7 +177,7 @@ func load_save(slot_index: int) -> bool:
 	_grimoire.load_save_data(data.get("grimoire", {}) as Dictionary)
 	_profile.load_save_data(data.get("profile", {}) as Dictionary)
 	_apply_player_save_data(data.get("player", {}) as Dictionary)
-	_apply_world_save_data(data.get("world", {}) as Dictionary)
+	_apply_world_save_data(world_data)
 	game_loaded.emit(slot_index)
 	return true
 
@@ -173,11 +189,14 @@ func continue_latest() -> bool:
 
 func _build_metadata() -> Dictionary:
 	var active_astral := _roster.get_active_astral()
+	var location_name := String(_get_map_id())
+	if _world_map != null and _world_map.has_method("get_location_name"):
+		location_name = String(_world_map.call("get_location_name"))
 	return {
 		"map_id": String(_get_map_id()),
-		"location": "Valle Verde",
+		"location": location_name,
 		"player_level": active_astral.level if active_astral != null else 1,
-		"astral_count": _roster.get_astral_count(),
+		"astral_count": _roster.get_total_astral_count(),
 		"captured_count": _profile.captured_monster_count,
 	}
 
@@ -273,7 +292,17 @@ func _get_day_night_cycle() -> DayNightCycle:
 func _get_map_id() -> StringName:
 	if _world_map == null:
 		return &""
+	if _world_map.has_method("get_map_id"):
+		return _normalize_legacy_map_id(
+			StringName(_world_map.call("get_map_id"))
+		)
 	return StringName(_world_map.name.to_snake_case())
+
+
+func _normalize_legacy_map_id(map_id: StringName) -> StringName:
+	if map_id == &"world_map" or map_id == &"verdant_valley":
+		return &"verdant_forest"
+	return map_id
 
 
 func _read_slot_data(slot_index: int, report_errors: bool) -> Dictionary:
@@ -310,7 +339,8 @@ func _validate_payload(data: Dictionary) -> bool:
 		if not (data.get(key, null) is Dictionary):
 			_report_failure("Il salvataggio è incompleto (%s)." % key)
 			return false
-	if not (data.get("astrals", null) is Array):
+	var astral_data: Variant = data.get("astrals", null)
+	if not (astral_data is Array or astral_data is Dictionary):
 		_report_failure("Il salvataggio non contiene una squadra valida.")
 		return false
 	return true

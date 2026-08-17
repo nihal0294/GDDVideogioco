@@ -1,9 +1,7 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=2 format=3]
 
 [ext_resource type="Script" path="res://game/astrals/astral_roster.gd" id="1_roster"]
-[ext_resource type="Resource" path="res://data/astrals/player_placeholder.tres" id="2_starter"]
-
 [node name="AstralRoster" type="Node"]
 script = ExtResource("1_roster")
-starter = ExtResource("2_starter")
+starter_id = &"venomquill"
 starter_level = 5

@@ -11,6 +11,11 @@ signal map_interactable_interacted(
 	interactable: InteractableArea3D,
 	interactor: Node3D
 )
+signal map_transition_requested(
+	destination_map_id: StringName,
+	destination_spawn_id: StringName,
+	actor: CharacterBody3D
+)
 
 const PALM_SCENE: PackedScene = preload(
 	"res://game/world/props/beach/palm.tscn"
@@ -36,31 +41,32 @@ const INVALID_POSITION := Vector3(0.0, -10000.0, 0.0)
 const MAX_PLACEMENT_ATTEMPTS := 80
 
 @export_group("Dimensioni")
-@export var map_size := Vector2(300.0, 300.0)
+@export var map_size := Vector2(150.0, 150.0)
 @export_range(10.0, 100.0, 1.0) var chunk_size: float = 50.0
 @export_range(1.0, 10.0, 0.5) var vertex_spacing: float = 2.0
 @export var sea_level: float = 0.0
 @export_range(0.1, 1.5, 0.05) var maximum_wade_depth: float = 0.4
-@export_range(32, 192, 8) var water_collision_segments: int = 96
+@export_range(32, 192, 8) var water_collision_segments: int = 48
 
 @export_group("Rilievi")
-@export var mountain_position := Vector2(-58.0, -42.0)
+@export var mountain_position := Vector2(-29.0, -21.0)
 @export_range(3.0, 20.0, 0.5) var mountain_height: float = 10.0
-@export_range(15.0, 60.0, 1.0) var mountain_radius: float = 32.0
+@export_range(15.0, 60.0, 1.0) var mountain_radius: float = 16.0
 
 @export_group("Generazione")
 @export var generation_seed: int = 18427
 @export_range(2.0, 20.0, 0.5) var minimum_prop_spacing: float = 5.5
-@export_range(0, 100, 1) var palm_count: int = 45
-@export_range(0, 30, 1) var tent_count: int = 8
-@export_range(0, 100, 1) var rock_count: int = 28
-@export_range(0, 60, 1) var driftwood_count: int = 15
-@export_range(0, 30, 1) var parasol_count: int = 7
+@export_range(0, 100, 1) var palm_count: int = 11
+@export_range(0, 30, 1) var tent_count: int = 2
+@export_range(0, 100, 1) var rock_count: int = 7
+@export_range(0, 60, 1) var driftwood_count: int = 4
+@export_range(0, 30, 1) var parasol_count: int = 2
 
 @onready var terrain_container: Node3D = $GeneratedTerrain
 @onready var water: MeshInstance3D = $Water
 @onready var deep_water_collision: StaticBody3D = $DeepWaterCollision
 @onready var prop_container: Node3D = $Props
+@onready var transition_portal: MapTransitionPortal = $TransitionPortal
 
 var _coast_noise := FastNoiseLite.new()
 var _height_noise := FastNoiseLite.new()
@@ -76,11 +82,49 @@ func _ready() -> void:
 	_configure_water()
 	_generate_deep_water_collision()
 	_generate_props()
+	_setup_transition_portal()
 	generation_finished.emit()
 
 
-func get_spawn_position() -> Vector3:
-	return Vector3(0.0, get_terrain_height(0.0, 0.0) + 1.15, 0.0)
+func get_map_id() -> StringName:
+	return &"large_island"
+
+
+func get_location_name() -> String:
+	return "Grande Isola"
+
+
+func get_spawn_position(spawn_id: StringName = &"default") -> Vector3:
+	var spawn_z := -2.0 if spawn_id == &"from_verdant_forest" else 0.0
+	return Vector3(0.0, get_terrain_height(0.0, spawn_z) + 1.15, spawn_z)
+
+
+func _setup_transition_portal() -> void:
+	var portal_z := -6.0
+	transition_portal.position = Vector3(
+		0.0,
+		get_terrain_height(0.0, portal_z) + 0.04,
+		portal_z
+	)
+	if not transition_portal.transition_requested.is_connected(
+		_on_transition_portal_requested
+	):
+		transition_portal.transition_requested.connect(
+			_on_transition_portal_requested
+		)
+
+
+func _on_transition_portal_requested(
+	_portal: MapTransitionPortal,
+	destination_map_id: StringName,
+	destination_spawn_id: StringName,
+	actor: CharacterBody3D
+) -> void:
+	map_transition_requested.emit(
+		destination_map_id,
+		destination_spawn_id,
+		actor
+	)
 
 
 func get_terrain_height(world_x: float, world_z: float) -> float:
@@ -114,14 +158,14 @@ func get_terrain_height(world_x: float, world_z: float) -> float:
 	)
 	height += interior_weight * _get_landform_height(
 		Vector2(world_x, world_z),
-		Vector2(48.0, 54.0),
-		44.0,
+		Vector2(24.0, 27.0),
+		22.0,
 		4.2
 	)
 	height += interior_weight * _get_landform_height(
 		Vector2(world_x, world_z),
-		Vector2(-72.0, 68.0),
-		38.0,
+		Vector2(-36.0, 34.0),
+		19.0,
 		3.4
 	)
 
@@ -315,7 +359,7 @@ func _configure_water() -> void:
 	water.position.y = sea_level
 	var plane := water.mesh as PlaneMesh
 	if plane != null:
-		plane.size = map_size + Vector2(120.0, 120.0)
+		plane.size = map_size + Vector2(60.0, 60.0)
 	var water_material := water.get_active_material(0) as ShaderMaterial
 	if water_material != null:
 		water_material.set_shader_parameter(
@@ -464,7 +508,7 @@ func _find_prop_position(definition: Dictionary) -> Vector3:
 
 
 func _is_reserved_space(position_2d: Vector2) -> bool:
-	if position_2d.length() < 22.0:
+	if position_2d.length() < 11.0:
 		return true
 	var north_south_path := absf(
 		position_2d.x - sin(position_2d.y * 0.025) * 5.0

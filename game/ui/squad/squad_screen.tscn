@@ -412,6 +412,21 @@ layout_mode = 2
 disabled = true
 text = "Rendi primo"
 
+[node name="HealPartyButton" type="Button" parent="OuterMargin/Layout/Footer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(175, 44)
+layout_mode = 2
+tooltip_text = "Cura temporanea di sviluppo: ripristina gli HP di tutta la squadra."
+text = "Cura squadra"
+
+[node name="EvolveButton" type="Button" parent="OuterMargin/Layout/Footer"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(210, 44)
+layout_mode = 2
+disabled = true
+text = "Evoluzione non disponibile"
+
 [node name="FooterSpacer" type="Control" parent="OuterMargin/Layout/Footer"]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -421,3 +436,6 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(130, 44)
 layout_mode = 2
 text = "Chiudi"
+
+[node name="EvolutionMenu" type="PopupMenu" parent="."]
+title = "Scegli evoluzione"

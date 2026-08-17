@@ -13,6 +13,9 @@ const ITEM_DEFINITION_PATHS: Array[String] = [
 	"res://data/items/pietra.tres",
 	"res://data/items/fungo.tres",
 	"res://data/items/bacca.tres",
+	"res://data/items/pietrafuoco.tres",
+	"res://data/items/pietragelo.tres",
+	"res://data/items/pietranatura.tres",
 ]
 
 var _definitions: Dictionary[StringName, ItemDefinition] = {}
@@ -67,8 +70,28 @@ func can_add_item(item_id: StringName) -> bool:
 
 func consume_item(item_id: StringName) -> bool:
 	var definition := get_item_definition(item_id)
-	if definition == null or not definition.consumable:
+	if (
+		definition == null
+		or not definition.consumable
+		or definition.requires_astral_target
+	):
 		return false
+	return _consume_definition(definition)
+
+
+func consume_targeted_item(item_id: StringName) -> bool:
+	var definition := get_item_definition(item_id)
+	if (
+		definition == null
+		or not definition.consumable
+		or not definition.requires_astral_target
+	):
+		return false
+	return _consume_definition(definition)
+
+
+func _consume_definition(definition: ItemDefinition) -> bool:
+	var item_id := definition.item_id
 	if _remove_item(item_id, 1) != 1:
 		return false
 	item_consumed.emit(definition)

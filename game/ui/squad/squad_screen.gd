@@ -2,6 +2,7 @@ class_name SquadScreen
 extends Control
 
 signal close_requested
+signal notification_requested(message: String)
 
 const PRESENTATION := preload("res://game/astrals/astral_presentation.gd")
 
@@ -30,9 +31,13 @@ const PRESENTATION := preload("res://game/astrals/astral_presentation.gd")
 @onready var move_up_button: Button = %MoveUpButton
 @onready var move_down_button: Button = %MoveDownButton
 @onready var set_lead_button: Button = %SetLeadButton
+@onready var heal_party_button: Button = %HealPartyButton
+@onready var evolve_button: Button = %EvolveButton
 @onready var close_button: Button = %CloseButton
+@onready var evolution_menu: PopupMenu = $EvolutionMenu
 
 var roster: AstralRoster = null
+var inventory: Inventory = null
 var _astrals: Array[AstralInstance] = []
 var _selected_astral: AstralInstance = null
 var _move_labels: Array[Label] = []
@@ -45,14 +50,21 @@ func _ready() -> void:
 	move_up_button.pressed.connect(_on_move_up_pressed)
 	move_down_button.pressed.connect(_on_move_down_pressed)
 	set_lead_button.pressed.connect(_on_set_lead_pressed)
+	heal_party_button.pressed.connect(_on_heal_party_pressed)
+	evolve_button.pressed.connect(_on_evolve_pressed)
+	evolution_menu.id_pressed.connect(_on_evolution_selected)
 	close_button.pressed.connect(_on_close_pressed)
 	_configure_focus_navigation()
 	_clear_details()
 
 
-func setup(source_roster: AstralRoster = null) -> void:
+func setup(
+	source_roster: AstralRoster = null,
+	source_inventory: Inventory = null
+) -> void:
 	_disconnect_roster_signals()
 	roster = source_roster
+	inventory = source_inventory
 	_connect_roster_signals()
 	_refresh_roster()
 
@@ -205,6 +217,54 @@ func _on_set_lead_pressed() -> void:
 	_set_selected_as_lead()
 
 
+func _on_heal_party_pressed() -> void:
+	if roster == null:
+		return
+	var healed_count := roster.heal_party_to_full()
+	if healed_count > 0:
+		notification_requested.emit(
+			"Squadra curata: %d Astral hanno recuperato tutti gli HP." % healed_count
+		)
+	else:
+		notification_requested.emit("La squadra è già completamente in salute.")
+	_refresh_roster()
+
+
+func _on_evolve_pressed() -> void:
+	if roster == null or _selected_astral == null:
+		return
+	var options := roster.get_available_evolutions(_selected_astral, inventory)
+	if options.is_empty():
+		return
+	evolution_menu.clear()
+	for option_index: int in options.size():
+		var option := options[option_index]
+		evolution_menu.add_item(
+			"%s - %s" % [option.target.display_name, option.get_method_text()],
+			option_index
+		)
+		evolution_menu.set_item_metadata(option_index, option)
+	evolution_menu.popup_centered(Vector2i(460, 0))
+
+
+func _on_evolution_selected(menu_id: int) -> void:
+	var menu_index := evolution_menu.get_item_index(menu_id)
+	if menu_index < 0 or roster == null or _selected_astral == null:
+		return
+	var option := evolution_menu.get_item_metadata(menu_index) as AstralEvolutionOption
+	var previous_name := _selected_astral.definition.display_name
+	if not roster.evolve_astral(_selected_astral, option, inventory):
+		notification_requested.emit("Le condizioni per l'evoluzione non sono soddisfatte.")
+		return
+	notification_requested.emit(
+		"%s si è evoluto in %s!" % [
+			previous_name,
+			_selected_astral.definition.display_name,
+		]
+	)
+	_refresh_roster()
+
+
 func _on_close_pressed() -> void:
 	close_requested.emit()
 
@@ -279,26 +339,15 @@ func _show_astral_details(astral: AstralInstance, roster_index: int) -> void:
 	health_value.text = "%d / %d" % [astral.current_health, maximum_health]
 	health_bar.max_value = maxf(float(maximum_health), 1.0)
 	health_bar.value = clampf(float(astral.current_health), 0.0, health_bar.max_value)
-	attack_value.text = _format_numeric_stat(
-		_get_instance_or_definition_value(
-			astral,
-			definition,
-			[&"attack_power", &"attack", &"base_attack"]
-		)
-	)
-	physical_defense_value.text = str(definition.physical_defense)
-	magic_attack_value.text = str(definition.magic_attack)
-	magic_defense_value.text = str(definition.magic_defense)
-	speed_value.text = _format_numeric_stat(
-		_get_instance_or_definition_value(
-			astral,
-			definition,
-			[&"speed", &"speed_stat", &"base_speed"]
-		)
-	)
+	attack_value.text = str(astral.get_attack_power())
+	physical_defense_value.text = str(astral.get_physical_defense())
+	magic_attack_value.text = str(astral.get_magic_attack())
+	magic_defense_value.text = str(astral.get_magic_defense())
+	speed_value.text = str(astral.get_speed())
 	elements_value.text = _format_elements(definition)
 	_update_experience(astral, definition)
 	_update_moves(astral, definition)
+	_update_evolution_button(astral)
 
 	var color_value: Variant = _get_property_value(
 		definition,
@@ -479,6 +528,26 @@ func _format_elements(definition: AstralDefinition) -> String:
 	return " / ".join(element_names)
 
 
+func _update_evolution_button(astral: AstralInstance) -> void:
+	var level_options := astral.get_available_evolutions()
+	evolve_button.visible = not level_options.is_empty()
+	var available := (
+		roster.get_available_evolutions(astral, inventory)
+		if roster != null
+		else []
+	)
+	evolve_button.disabled = available.is_empty()
+	evolve_button.text = (
+		"Evolvi (%d)" % available.size()
+		if not available.is_empty()
+		else "Evoluzione non disponibile"
+	)
+	if available.is_empty() and not level_options.is_empty():
+		evolve_button.tooltip_text = "Serve la pietra evolutiva richiesta."
+	else:
+		evolve_button.tooltip_text = "Scegli la nuova forma dell'Astral."
+
+
 func _format_named_value(value: Variant) -> String:
 	if value == null:
 		return ""
@@ -547,6 +616,9 @@ func _clear_details() -> void:
 		_move_labels[index].text = "%d. — Slot libero" % (index + 1)
 		_move_labels[index].modulate = Color(0.62, 0.67, 0.74, 1.0)
 	_update_reorder_buttons(-1)
+	evolve_button.disabled = true
+	evolve_button.hide()
+	evolve_button.text = "Evoluzione non disponibile"
 
 
 func _focus_astral_list() -> void:
@@ -563,6 +635,10 @@ func _configure_focus_navigation() -> void:
 	move_down_button.focus_neighbor_left = move_down_button.get_path_to(move_up_button)
 	move_down_button.focus_neighbor_right = move_down_button.get_path_to(set_lead_button)
 	set_lead_button.focus_neighbor_left = set_lead_button.get_path_to(move_down_button)
-	set_lead_button.focus_neighbor_right = set_lead_button.get_path_to(close_button)
-	close_button.focus_neighbor_left = close_button.get_path_to(set_lead_button)
+	set_lead_button.focus_neighbor_right = set_lead_button.get_path_to(heal_party_button)
+	heal_party_button.focus_neighbor_left = heal_party_button.get_path_to(set_lead_button)
+	heal_party_button.focus_neighbor_right = heal_party_button.get_path_to(evolve_button)
+	evolve_button.focus_neighbor_left = evolve_button.get_path_to(heal_party_button)
+	evolve_button.focus_neighbor_right = evolve_button.get_path_to(close_button)
+	close_button.focus_neighbor_left = close_button.get_path_to(evolve_button)
 	close_button.focus_neighbor_bottom = close_button.get_path_to(astral_list)

@@ -114,14 +114,14 @@ static func calculate_damage_result(
 	var effective_attack := maxi(
 		1,
 		floori(
-			float(_get_offensive_stat(attacker.definition, move))
+			float(_get_offensive_stat(attacker, move))
 			* attack_stat_modifier
 		)
 	)
 	var effective_defense := maxi(
 		1,
 		floori(
-			float(_get_defensive_stat(defender.definition, move))
+			float(_get_defensive_stat(defender, move))
 			* defense_stat_modifier
 		)
 	)
@@ -185,21 +185,21 @@ static func _can_calculate_damage(
 
 
 static func _get_offensive_stat(
-	definition: AstralDefinition,
+	astral: AstralInstance,
 	move: AstralMoveDefinition
 ) -> int:
 	if move.damage_class == AstralMoveDefinition.DamageClass.MAGICAL:
-		return maxi(definition.magic_attack, 1)
-	return maxi(definition.attack_power, 1)
+		return maxi(astral.get_magic_attack(), 1)
+	return maxi(astral.get_attack_power(), 1)
 
 
 static func _get_defensive_stat(
-	definition: AstralDefinition,
+	astral: AstralInstance,
 	move: AstralMoveDefinition
 ) -> int:
 	if move.damage_class == AstralMoveDefinition.DamageClass.MAGICAL:
-		return maxi(definition.magic_defense, 1)
-	return maxi(definition.physical_defense, 1)
+		return maxi(astral.get_magic_defense(), 1)
+	return maxi(astral.get_physical_defense(), 1)
 
 
 static func calculate_experience_reward(defeated: AstralInstance) -> int:

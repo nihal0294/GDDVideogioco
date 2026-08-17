@@ -7,11 +7,8 @@ const INVENTORY_SCENE: PackedScene = preload("res://game/inventory/inventory.tsc
 const ASTRAL_ROSTER_SCENE: PackedScene = preload(
 	"res://game/astrals/astral_roster.tscn"
 )
-const WILD_ASTRAL: AstralDefinition = preload(
-	"res://data/astrals/wild_placeholder.tres"
-)
-const PLAYER_ASTRAL: AstralDefinition = preload(
-	"res://data/astrals/player_placeholder.tres"
+const ASTRAL_BOX_SCENE: PackedScene = preload(
+	"res://game/ui/box/astral_box_screen.tscn"
 )
 const ASTRAL_PRESENTATION := preload(
 	"res://game/astrals/astral_presentation.gd"
@@ -25,9 +22,13 @@ var _battle_outcome: StringName = &""
 var _captured_astral: AstralInstance = null
 var _watchdog: Timer = null
 var _test_finished: bool = false
+var _wild_astral: AstralDefinition = null
+var _player_astral: AstralDefinition = null
 
 
 func _initialize() -> void:
+	_wild_astral = AstralCatalog.load_definition(&"flambore")
+	_player_astral = AstralCatalog.load_definition(&"venomquill")
 	_watchdog = Timer.new()
 	_watchdog.name = "SmokeTestWatchdog"
 	_watchdog.wait_time = WATCHDOG_TIMEOUT_SECONDS
@@ -66,11 +67,14 @@ func _run() -> void:
 	_test_player_and_camera(main)
 	_test_world_map(main)
 	await _test_squad_screen(main)
+	await _test_astral_box_screen(main)
 	await _test_grimoire_and_player_profile(main)
 	await _test_options_and_save_system(main)
 	_test_astral_instance_progression()
+	await _test_astral_catalog_and_evolution()
 	_test_astral_sex_and_presentation()
 	await _test_astral_roster()
+	await _test_astral_box_storage()
 	_test_element_chart_data()
 	_test_battle_math()
 	_test_move_damage_tiers()
@@ -86,6 +90,7 @@ func _run() -> void:
 	await _test_battle_forced_switch()
 	await _test_trainers(main)
 	await _test_world_npcs(main)
+	await _test_map_transpositions(main)
 	_test_inventory_data()
 	_test_grimoire_profile_inputs()
 	_test_inputs()
@@ -156,9 +161,9 @@ func _test_grimoire_and_player_profile(main: Node) -> void:
 		return
 
 	var entries := grimoire.get_entries()
-	_expect(entries.size() == 5, "Il Grimorio non contiene le cinque specie iniziali.")
+	_expect(entries.size() == 17, "Il Grimorio non contiene le diciassette forme Astral.")
 	_expect(
-		grimoire.is_captured(PLAYER_ASTRAL.astral_id),
+		grimoire.is_captured(_player_astral.astral_id),
 		"Lo starter posseduto non risulta catturato nel Grimorio."
 	)
 	_expect(
@@ -173,9 +178,9 @@ func _test_grimoire_and_player_profile(main: Node) -> void:
 	_expect(not game_ui.squad_screen.visible, "Il Grimorio lascia aperta Squadra.")
 	var entry_list := grimoire_screen.get_node_or_null("%EntryList") as ItemList
 	var progress_label := grimoire_screen.get_node_or_null("%ProgressLabel") as Label
-	_expect(entry_list != null and entry_list.item_count == 5, "Indice Grimorio errato.")
+	_expect(entry_list != null and entry_list.item_count == 17, "Indice Grimorio errato.")
 	_expect(
-		progress_label != null and "Visti 1/5" in progress_label.text,
+		progress_label != null and "Visti 1/17" in progress_label.text,
 		"Il Grimorio non mostra il progresso delle scoperte."
 	)
 	await _send_action(&"toggle_grimoire")
@@ -184,8 +189,12 @@ func _test_grimoire_and_player_profile(main: Node) -> void:
 	var pool_value: Variant = main.call("get_wild_astral_pool")
 	var pool := pool_value as Array
 	var discovered_definition: AstralDefinition = null
-	if pool != null and not pool.is_empty():
-		discovered_definition = pool.front() as AstralDefinition
+	if pool != null:
+		for candidate: Variant in pool:
+			var definition := candidate as AstralDefinition
+			if definition != null and not grimoire.is_captured(definition.astral_id):
+				discovered_definition = definition
+				break
 	if discovered_definition == null:
 		_fail("Nessuna specie disponibile per il test Grimorio.")
 		return
@@ -458,7 +467,7 @@ func _test_options_and_save_system(main: Node) -> void:
 	if player_visual != null:
 		player_visual.rotation.y = 0.73
 	inventory.load_save_data({"cocco": 4, "legno": 3})
-	active_astral.current_health = maxi(active_astral.definition.max_health - 3, 1)
+	active_astral.current_health = maxi(active_astral.get_max_health() - 3, 1)
 	active_astral.experience = 47
 	if active_astral.get_move_count() > 1:
 		active_astral.reorder_move(0, active_astral.get_move_count() - 1)
@@ -552,7 +561,7 @@ func _test_options_and_save_system(main: Node) -> void:
 	var loaded_astral := roster.get_active_astral()
 	_expect(
 		loaded_astral != null
-		and loaded_astral.current_health == maxi(loaded_astral.definition.max_health - 3, 1)
+		and loaded_astral.current_health == maxi(loaded_astral.get_max_health() - 3, 1)
 		and loaded_astral.experience == 47,
 		"HP o EXP dell'Astral non sono stati ripristinati."
 	)
@@ -638,22 +647,16 @@ func _test_wild_astral_pool(main: Node) -> void:
 		_fail("Il pool degli Astral selvatici non e un Array.")
 		return
 	var pool := raw_pool as Array
-	_expect(pool.size() == 4, "Il pool selvatico non contiene esattamente quattro specie.")
-	var expected_element_counts: Dictionary[StringName, int] = {
-		&"neutro": 1,
-		&"fuoco": 1,
-		&"acqua": 1,
-		&"natura": 1,
+	_expect(pool.size() == 6, "Il pool selvatico non contiene le sei specie base.")
+	var expected_bst: Dictionary[StringName, int] = {
+		&"venomquill": 490,
+		&"flambore": 260,
+		&"vorix": 333,
+		&"panthor": 333,
+		&"silphy": 375,
+		&"pandalith": 400,
 	}
-	var actual_element_counts: Dictionary[StringName, int] = {}
 	var seen_ids: Dictionary[StringName, bool] = {}
-	var expected_cooldowns: Array[int] = [0, 1, 2, 3]
-	var expected_power_by_cooldown: Dictionary[int, int] = {
-		0: 300,
-		1: 350,
-		2: 475,
-		3: 600,
-	}
 	for candidate: Variant in pool:
 		var definition := candidate as AstralDefinition
 		if definition == null:
@@ -669,45 +672,41 @@ func _test_wild_astral_pool(main: Node) -> void:
 			% definition.astral_id
 		)
 		seen_ids[definition.astral_id] = true
-		actual_element_counts[definition.primary_element] = (
-			actual_element_counts.get(definition.primary_element, 0) + 1
-		)
 		_expect(
-			definition.starting_moves.size() == 4,
-			"%s non possiede quattro mosse iniziali." % definition.display_name
+			expected_bst.has(definition.astral_id),
+			"Specie base inattesa nel pool: %s." % definition.astral_id
 		)
 		_expect(
 			definition.has_valid_base_stats(),
 			"%s possiede statistiche base non valide." % definition.display_name
 		)
 		_expect(
-			definition.get_base_stat_total() == 400,
-			"%s non possiede il BST provvisorio di 400." % definition.display_name
+			definition.get_base_stat_total()
+			== expected_bst.get(definition.astral_id, -1),
+			"%s non possiede il BST definitivo richiesto." % definition.display_name
 		)
-		var cooldowns: Array[int] = []
-		for move: AstralMoveDefinition in definition.starting_moves:
+		_expect(
+			not definition.model_path.is_empty()
+			and FileAccess.file_exists(definition.model_path),
+			"%s non possiede un modello 3D valido." % definition.display_name
+		)
+		var level_five_moves := definition.get_moves_available_at_level(5)
+		_expect(
+			not level_five_moves.is_empty()
+			and level_five_moves.size() <= AstralInstance.MAX_MOVE_COUNT,
+			"%s non possiede un set mosse iniziale valido." % definition.display_name
+		)
+		for move: AstralMoveDefinition in level_five_moves:
 			if move == null:
 				_fail("%s contiene una mossa null." % definition.display_name)
 				continue
-			cooldowns.append(move.cooldown_turns)
 			_expect(
-				move.power == expected_power_by_cooldown.get(
-					move.cooldown_turns,
-					-1
-				),
-				"%s non rispetta la potenza della fascia CD %d." % [
-					move.display_name,
-					move.cooldown_turns,
-				]
+				move.cooldown_turns >= 0 and move.cooldown_turns <= 5,
+				"%s possiede un costo fuori intervallo." % move.display_name
 			)
-		cooldowns.sort()
-		_expect(
-			cooldowns == expected_cooldowns,
-			"%s non copre i cooldown 0, 1, 2 e 3." % definition.display_name
-		)
 	_expect(
-		actual_element_counts == expected_element_counts,
-		"Le quattro specie non coprono una volta ciascuna neutro, fuoco, acqua e natura."
+		seen_ids.size() == expected_bst.size(),
+		"Il pool non contiene una volta ciascuna le sei specie base."
 	)
 	if main.has_method("set_encounter_random_seed"):
 		main.call("set_encounter_random_seed", 731)
@@ -752,11 +751,11 @@ func _test_base_stat_rules() -> void:
 		"Le assegnazioni singole permettono di superare il BST massimo."
 	)
 
-	var starter := load("res://data/astrals/player_placeholder.tres") as AstralDefinition
+	var starter := AstralCatalog.load_definition(&"venomquill")
 	_expect(starter != null, "Definizione dello starter mancante per il test BST.")
 	if starter != null:
 		_expect(starter.has_valid_base_stats(), "Lo starter possiede statistiche non valide.")
-		_expect(starter.get_base_stat_total() == 400, "Lo starter non possiede BST 400.")
+		_expect(starter.get_base_stat_total() == 490, "Venomquill non possiede BST 490.")
 
 
 func _test_player_and_camera(main: Node) -> void:
@@ -790,7 +789,7 @@ func _test_squad_screen(main: Node) -> void:
 	_expect(starter != null, "Starter Astral mancante.")
 	if starter != null:
 		_expect(starter.level == 5, "Lo starter non comincia al livello 5.")
-		_expect(starter.get_move_count() == 4, "Lo starter non possiede quattro mosse.")
+		_expect(starter.get_move_count() == 2, "Venomquill non possiede le due mosse di livello 5.")
 
 	await _send_action(&"toggle_squad")
 	_expect(squad_screen.visible, "I non apre la schermata Squadra.")
@@ -868,17 +867,17 @@ func _test_squad_screen(main: Node) -> void:
 			)
 		if physical_defense_value != null:
 			_expect(
-				physical_defense_value.text == str(starter.definition.physical_defense),
+				physical_defense_value.text == str(starter.get_physical_defense()),
 				"La scheda Squadra mostra una PDef errata."
 			)
 		if magic_attack_value != null:
 			_expect(
-				magic_attack_value.text == str(starter.definition.magic_attack),
+				magic_attack_value.text == str(starter.get_magic_attack()),
 				"La scheda Squadra mostra un Atkm errato."
 			)
 		if magic_defense_value != null:
 			_expect(
-				magic_defense_value.text == str(starter.definition.magic_defense),
+				magic_defense_value.text == str(starter.get_magic_defense()),
 				"La scheda Squadra mostra una MDef errata."
 			)
 		if astral_name != null:
@@ -901,15 +900,33 @@ func _test_squad_screen(main: Node) -> void:
 		var move_label := squad_screen.get_node_or_null("%%%s" % move_node_name) as Label
 		_expect(move_label != null, "Slot mossa mancante: %s." % move_node_name)
 		if move_label != null:
-			_expect(
-				not "Slot libero" in move_label.text,
-				"La scheda non mostra tutte e quattro le mosse dello starter."
-			)
-			_expect(
-				"CD %d" % move_index in move_label.text,
-				"La scheda Squadra non mostra il cooldown della mossa %d."
-				% (move_index + 1)
-			)
+			if starter != null and move_index < starter.get_move_count():
+				var move := starter.get_move(move_index)
+				_expect(
+					move != null and "CD %d" % move.cooldown_turns in move_label.text,
+					"La scheda Squadra non mostra la mossa %d." % (move_index + 1)
+				)
+			else:
+				_expect(
+					"Slot libero" in move_label.text,
+					"Uno slot mossa non appreso non risulta libero."
+				)
+	var heal_party_button := squad_screen.get_node_or_null("%HealPartyButton") as Button
+	_expect(heal_party_button != null, "Il tasto rapido Cura squadra è mancante.")
+	if starter != null and heal_party_button != null:
+		starter.current_health = maxi(starter.get_max_health() - 5, 1)
+		heal_party_button.emit_signal("pressed")
+		await process_frame
+		_expect(
+			starter.current_health == starter.get_max_health(),
+			"Cura squadra non ripristina gli HP dello starter."
+		)
+		_expect(
+			astral_list != null
+			and "HP %d/%d" % [starter.get_max_health(), starter.get_max_health()]
+			in astral_list.get_item_text(0),
+			"La lista Squadra non si aggiorna dopo la cura."
+		)
 
 	await _send_action(&"toggle_inventory")
 	_expect(not squad_screen.visible, "Tab non chiude Squadra.")
@@ -943,6 +960,68 @@ func _test_squad_screen(main: Node) -> void:
 	_expect(not paused, "Chiudere Squadra non ripristina il mondo.")
 
 
+func _test_astral_box_screen(main: Node) -> void:
+	var game_ui := main.get_node_or_null("GameUI") as GameUI
+	var box_screen := main.get_node_or_null(
+		"GameUI/AstralBoxScreen"
+	) as AstralBoxScreen
+	if game_ui == null or box_screen == null:
+		_fail("Impossibile verificare la schermata Box Astral.")
+		return
+
+	await _send_action(&"toggle_astral_box")
+	_expect(box_screen.visible, "B non apre il Box Astral.")
+	_expect(paused, "Il Box Astral non sospende il mondo.")
+	_expect(not game_ui.squad_screen.visible, "Il Box lascia aperta Squadra.")
+	var party_list := box_screen.get_node_or_null("%PartyList") as ItemList
+	var box_list := box_screen.get_node_or_null("%BoxList") as ItemList
+	var box_label := box_screen.get_node_or_null("%BoxLabel") as Label
+	var equip_button := box_screen.get_node_or_null("%EquipButton") as Button
+	var release_dialog := box_screen.get_node_or_null(
+		"ReleaseConfirmation"
+	) as ConfirmationDialog
+	_expect(
+		party_list != null and party_list.item_count == AstralRoster.MAX_PARTY_SIZE,
+		"Il Box non mostra i sei slot della squadra."
+	)
+	_expect(
+		box_list != null and box_list.item_count == AstralRoster.BOX_CAPACITY,
+		"Il Box non mostra trenta slot per pagina."
+	)
+	_expect(
+		box_label != null and "01 / 50" in box_label.text,
+		"Il Box non mostra le cinquanta pagine numerate."
+	)
+	_expect(
+		equip_button != null and equip_button.disabled,
+		"Equipaggia non resta un placeholder disabilitato."
+	)
+	_expect(release_dialog != null, "Manca la conferma per liberare un Astral.")
+	_expect(
+		party_list != null and root.gui_get_focus_owner() == party_list,
+		"La squadra del Box non riceve il focus all'apertura."
+	)
+
+	box_screen.select_box(49)
+	_expect(
+		box_screen.get_current_box_index() == 49
+		and box_label != null
+		and "50 / 50" in box_label.text,
+		"Non ci si può spostare liberamente fino al Box 50."
+	)
+	await _send_action(&"toggle_astral_box")
+	_expect(not box_screen.visible, "B non chiude il Box Astral.")
+	_expect(not paused, "Chiudere il Box non ripristina il mondo.")
+
+	await _send_action(&"toggle_astral_box")
+	game_ui.set_pause_lock(&"battle", true)
+	_expect(not box_screen.visible, "Il battle lock non chiude il Box Astral.")
+	await _send_action(&"toggle_astral_box")
+	_expect(not box_screen.visible, "B apre il Box durante il battle lock.")
+	game_ui.set_pause_lock(&"battle", false)
+	_expect(not paused, "Rimuovere il battle lock lascia il Box in pausa.")
+
+
 func _test_astral_instance_progression() -> void:
 	var move_one := _make_test_move(&"test_one", "Test One", 5, &"neutro")
 	var move_two := _make_test_move(&"test_two", "Test Two", 6, &"natura")
@@ -968,7 +1047,7 @@ func _test_astral_instance_progression() -> void:
 	)
 	var instance := _make_test_astral_instance(definition, 5)
 	_expect(instance.level == 5, "AstralInstance non conserva il livello iniziale.")
-	_expect(instance.current_health == 40, "AstralInstance non ripristina gli HP.")
+	_expect(instance.current_health == instance.get_max_health(), "AstralInstance non ripristina gli HP.")
 	_expect(instance.get_move_count() == 4, "AstralInstance non inizializza quattro mosse.")
 	for move_index: int in 4:
 		_expect(
@@ -1060,6 +1139,173 @@ func _test_astral_instance_progression() -> void:
 	)
 
 
+func _test_astral_catalog_and_evolution() -> void:
+	var definitions := AstralCatalog.load_ordered_definitions()
+	var expected_bst: Dictionary[StringName, int] = {
+		&"venomquill": 490,
+		&"flambore": 260,
+		&"pyrobore": 410,
+		&"fortessbore": 525,
+		&"vorix": 333,
+		&"saurolix": 444,
+		&"phrynolix": 555,
+		&"panthor": 333,
+		&"sharkra": 444,
+		&"fangoras": 555,
+		&"silphy": 375,
+		&"airdon": 425,
+		&"eldrakans": 495,
+		&"pandalith": 400,
+		&"aikilith": 500,
+		&"frostalith": 500,
+		&"mindlith": 500,
+	}
+	_expect(definitions.size() == 17, "Il catalogo non contiene le 17 forme richieste.")
+	for definition: AstralDefinition in definitions:
+		if definition == null:
+			_fail("Il catalogo contiene una definizione Astral nulla.")
+			continue
+		_expect(
+			expected_bst.has(definition.astral_id)
+			and definition.get_base_stat_total()
+			== expected_bst.get(definition.astral_id, -1),
+			"BST errato per %s." % definition.display_name
+		)
+		_expect(
+			definition.has_valid_base_stats(),
+			"Statistiche fuori limite per %s." % definition.display_name
+		)
+		_expect(
+			not definition.model_path.is_empty()
+			and FileAccess.file_exists(definition.model_path),
+			"Modello GLB mancante per %s." % definition.display_name
+		)
+
+	var inventory := INVENTORY_SCENE.instantiate() as Inventory
+	var roster := ASTRAL_ROSTER_SCENE.instantiate() as AstralRoster
+	root.add_child(inventory)
+	root.add_child(roster)
+	await process_frame
+	var flambore := AstralInstance.new()
+	flambore.setup(
+		AstralCatalog.load_definition(&"flambore"),
+		13,
+		AstralInstance.Sex.MALE
+	)
+	_expect(roster.capture_astral(flambore), "Impossibile preparare Flambore per l'evoluzione.")
+	var evolving_boar := roster.get_last_captured_astral()
+	var first_options := roster.get_available_evolutions(evolving_boar, inventory)
+	_expect(first_options.size() == 1, "Flambore non propone Pyrobore al livello 13.")
+	var squad_scene := load("res://game/ui/squad/squad_screen.tscn") as PackedScene
+	var evolution_screen := squad_scene.instantiate() as SquadScreen
+	root.add_child(evolution_screen)
+	evolution_screen.setup(roster, inventory)
+	evolution_screen.open()
+	await process_frame
+	var evolving_index := roster.get_astrals().find(evolving_boar)
+	var evolution_list := evolution_screen.get_node_or_null("%AstralList") as ItemList
+	var evolution_button := evolution_screen.get_node_or_null("%EvolveButton") as Button
+	if evolution_list != null and evolving_index >= 0:
+		evolution_list.select(evolving_index)
+		evolution_list.item_selected.emit(evolving_index)
+	_expect(
+		evolution_button != null
+		and evolution_button.visible
+		and not evolution_button.disabled,
+		"Squadra non mostra l'opzione Evolvi quando il livello e sufficiente."
+	)
+	evolution_screen.queue_free()
+	await process_frame
+	if not first_options.is_empty():
+		_expect(
+			roster.evolve_astral(evolving_boar, first_options.front(), inventory),
+			"L'evoluzione Flambore -> Pyrobore fallisce."
+		)
+		_expect(
+			evolving_boar.definition.astral_id == &"pyrobore"
+			and evolving_boar.level == 13
+			and evolving_boar.sex == AstralInstance.Sex.MALE,
+			"Pyrobore non conserva livello e sesso."
+		)
+		evolving_boar.level = 27
+		var second_options := roster.get_available_evolutions(evolving_boar, inventory)
+		_expect(second_options.size() == 1, "Pyrobore non propone Fortessbore al livello 27.")
+		if not second_options.is_empty():
+			_expect(
+				roster.evolve_astral(evolving_boar, second_options.front(), inventory),
+				"L'evoluzione Pyrobore -> Fortessbore fallisce."
+			)
+			_expect(
+				evolving_boar.definition.astral_id == &"fortessbore",
+				"La seconda forma della linea Boar e errata."
+			)
+
+	var pandalith := AstralInstance.new()
+	pandalith.setup(
+		AstralCatalog.load_definition(&"pandalith"),
+		30,
+		AstralInstance.Sex.FEMALE
+	)
+	_expect(roster.capture_astral(pandalith), "Impossibile preparare Pandalith.")
+	var stored_pandalith := roster.get_last_captured_astral()
+	var pandalith_party_index := roster.get_astrals().find(stored_pandalith)
+	_expect(
+		pandalith_party_index >= 0
+		and roster.deposit_astral(pandalith_party_index, 0, 0),
+		"Pandalith non viene depositato nel Box per il test."
+	)
+	for stone_id: StringName in [&"pietrafuoco", &"pietragelo", &"pietranatura"]:
+		_expect(
+			inventory.add_item(stone_id, 1) == 1,
+			"La pietra evolutiva %s non entra nell'inventario." % stone_id
+		)
+	var stone_options := roster.get_available_evolutions(stored_pandalith, inventory)
+	_expect(stone_options.size() == 3, "Pandalith non propone le tre evoluzioni ramificate.")
+	var box_screen := ASTRAL_BOX_SCENE.instantiate() as AstralBoxScreen
+	root.add_child(box_screen)
+	box_screen.setup(roster, inventory)
+	box_screen.open()
+	await process_frame
+	var box_list := box_screen.get_node_or_null("%BoxList") as ItemList
+	var box_evolve_button := box_screen.get_node_or_null("%EvolveButton") as Button
+	if box_list != null:
+		box_list.select(0)
+		box_list.item_selected.emit(0)
+	_expect(
+		box_evolve_button != null
+		and box_evolve_button.visible
+		and not box_evolve_button.disabled,
+		"Il Box non permette di evolvere un Pandalith idoneo."
+	)
+	box_screen.queue_free()
+	await process_frame
+	var ice_option: AstralEvolutionOption = null
+	for option: AstralEvolutionOption in stone_options:
+		if option.required_item_id == &"pietragelo":
+			ice_option = option
+			break
+	var ice_quantity := inventory.get_quantity(&"pietragelo")
+	_expect(ice_option != null, "L'opzione Pietragelo non e disponibile.")
+	if ice_option != null:
+		_expect(
+			roster.evolve_astral(stored_pandalith, ice_option, inventory),
+			"L'evoluzione dal Box con Pietragelo fallisce."
+		)
+		_expect(
+			stored_pandalith.definition.astral_id == &"frostalith"
+			and stored_pandalith.sex == AstralInstance.Sex.FEMALE,
+			"Pandalith non diventa Frostalith o perde il sesso."
+		)
+		_expect(
+			inventory.get_quantity(&"pietragelo") == ice_quantity - 1,
+			"L'evoluzione non consuma esattamente una Pietragelo."
+		)
+
+	roster.queue_free()
+	inventory.queue_free()
+	await process_frame
+
+
 func _test_astral_sex_and_presentation() -> void:
 	_expect(
 		AstralInstance.sex_from_roll(0.0) == AstralInstance.Sex.MALE,
@@ -1079,7 +1325,7 @@ func _test_astral_sex_and_presentation() -> void:
 	)
 
 	var female := AstralInstance.new()
-	female.setup(PLAYER_ASTRAL, 5, AstralInstance.Sex.FEMALE)
+	female.setup(_player_astral, 5, AstralInstance.Sex.FEMALE)
 	var female_copy := female.duplicate_runtime()
 	_expect(female.sex == AstralInstance.Sex.FEMALE, "setup ignora il sesso forzato.")
 	_expect(
@@ -1088,7 +1334,11 @@ func _test_astral_sex_and_presentation() -> void:
 	)
 	_expect(
 		ASTRAL_PRESENTATION.format_identity(female)
-		== "%s ♀ 🍃" % PLAYER_ASTRAL.display_name,
+		== "%s %s %s" % [
+			_player_astral.display_name,
+			ASTRAL_PRESENTATION.get_sex_symbol(AstralInstance.Sex.FEMALE),
+			ASTRAL_PRESENTATION.get_element_symbol(_player_astral.primary_element),
+		],
 		"L'identita Astral non combina nome, sesso ed elemento."
 	)
 	var expected_symbols: Dictionary[StringName, String] = {
@@ -1124,13 +1374,13 @@ func _test_astral_roster() -> void:
 		await process_frame
 		return
 	_expect(starter.level == 5, "AstralRoster non crea lo starter al livello 5.")
-	_expect(starter.current_health == starter.definition.max_health, "Starter senza HP pieni.")
-	_expect(starter.get_move_count() == 4, "Starter senza quattro mosse.")
+	_expect(starter.current_health == starter.get_max_health(), "Starter senza HP pieni.")
+	_expect(starter.get_move_count() == 2, "Venomquill non possiede le due mosse iniziali.")
 	var roster_copy := roster.get_astrals()
 	roster_copy.clear()
 	_expect(roster.get_astral_count() == 1, "get_astrals espone l'array interno.")
 
-	var first_source := _make_test_astral_instance(WILD_ASTRAL, 3)
+	var first_source := _make_test_astral_instance(_wild_astral, 3)
 	first_source.sex = AstralInstance.Sex.FEMALE
 	first_source.current_health = 11
 	first_source.experience = 77
@@ -1162,10 +1412,21 @@ func _test_astral_roster() -> void:
 			"La cattura condivide l'array mosse con la sorgente."
 		)
 
-	var second_source := _make_test_astral_instance(PLAYER_ASTRAL, 2)
+	var second_source := _make_test_astral_instance(_player_astral, 2)
 	_expect(roster.capture_astral(second_source), "Seconda cattura valida rifiutata.")
 	var second_captured: AstralInstance = roster.get_astral(2)
 	_expect(second_captured != null, "Secondo Astral catturato mancante.")
+	for party_astral: AstralInstance in roster.get_astrals():
+		party_astral.current_health = maxi(party_astral.get_max_health() - 1, 0)
+	_expect(
+		roster.heal_party_to_full() == roster.get_astral_count(),
+		"La cura rapida non include tutti gli Astral della squadra."
+	)
+	for party_astral: AstralInstance in roster.get_astrals():
+		_expect(
+			party_astral.current_health == party_astral.get_max_health(),
+			"Un Astral della squadra non viene curato al massimo."
+		)
 	_expect(
 		roster.get_active_astral() == starter,
 		"Catturare un Astral modifica il primo combattente."
@@ -1192,7 +1453,7 @@ func _test_astral_roster() -> void:
 		"Un riordino invalido modifica il roster."
 	)
 	var active_before_capture: AstralInstance = roster.get_active_astral()
-	var third_source := _make_test_astral_instance(WILD_ASTRAL, 4)
+	var third_source := _make_test_astral_instance(_wild_astral, 4)
 	_expect(roster.capture_astral(third_source), "Terza cattura valida rifiutata.")
 	_expect(
 		roster.get_active_astral() == active_before_capture,
@@ -1205,6 +1466,141 @@ func _test_astral_roster() -> void:
 		"AstralRoster cattura un'istanza senza definizione."
 	)
 	roster.queue_free()
+	await process_frame
+
+
+func _test_astral_box_storage() -> void:
+	var roster := ASTRAL_ROSTER_SCENE.instantiate() as AstralRoster
+	if roster == null:
+		_fail("Impossibile istanziare il roster per il test Box.")
+		return
+	root.add_child(roster)
+	await process_frame
+	_expect(roster.get_box_count() == 50, "Il roster non crea cinquanta Box.")
+	_expect(roster.get_box_capacity() == 30, "Ogni Box non possiede trenta slot.")
+
+	for capture_index: int in 7:
+		var source := _make_test_astral_instance(_wild_astral, capture_index + 2)
+		_expect(roster.capture_astral(source), "Il Box rifiuta una cattura valida.")
+	_expect(
+		roster.get_astral_count() == AstralRoster.MAX_PARTY_SIZE,
+		"Le catture superano il limite di sei Astral in squadra."
+	)
+	_expect(
+		roster.get_total_astral_count() == 8,
+		"Il conteggio totale non include gli Astral conservati nei Box."
+	)
+	_expect(
+		roster.get_box_astral(0, 0) != null
+		and roster.get_box_astral(0, 1) != null,
+		"Le catture oltre il sesto slot non finiscono nel primo Box."
+	)
+	_expect(
+		roster.get_last_captured_astral() == roster.get_box_astral(0, 1),
+		"La cattura nel Box non espone l'istanza archiviata."
+	)
+	_expect(
+		not roster.withdraw_astral(0, 0),
+		"Il Box ritira un Astral quando la squadra è piena."
+	)
+
+	var deposited := roster.get_astral(5)
+	_expect(roster.deposit_astral(5, 0), "Deposito nel Box fallito.")
+	_expect(
+		roster.get_astral_count() == 5
+		and roster.get_box_astral(0, 2) == deposited,
+		"Il deposito non conserva l'istanza nello slot libero."
+	)
+	var withdrawn := roster.get_box_astral(0, 0)
+	_expect(roster.withdraw_astral(0, 0), "Ritiro dal Box fallito.")
+	_expect(
+		roster.get_astral_count() == 6 and roster.get_astral(5) == withdrawn,
+		"Il ritiro non aggiunge l'Astral in coda alla squadra."
+	)
+
+	var previous_lead := roster.get_active_astral()
+	var stored_swap := roster.get_box_astral(0, 1)
+	_expect(
+		roster.swap_party_with_box(0, 0, 1),
+		"Lo scambio diretto squadra/Box fallisce."
+	)
+	_expect(
+		roster.get_active_astral() == stored_swap
+		and roster.get_box_astral(0, 1) == previous_lead,
+		"Lo scambio squadra/Box non conserva le due istanze."
+	)
+
+	var moved_astral := roster.get_box_astral(0, 2)
+	_expect(
+		roster.move_box_astral(0, 2, 49, 29),
+		"Non si può spostare un Astral fra Box distanti."
+	)
+	_expect(
+		roster.get_box_astral(0, 2) == null
+		and roster.get_box_astral(49, 29) == moved_astral,
+		"Lo spostamento fra Box usa uno slot errato."
+	)
+	_expect(
+		roster.release_box_astral(49, 29),
+		"Liberare un Astral dal Box fallisce."
+	)
+	_expect(
+		roster.get_box_astral(49, 29) == null
+		and roster.get_total_astral_count() == 7,
+		"Liberare dal Box non rimuove definitivamente l'Astral."
+	)
+	_expect(
+		roster.release_party_astral(5),
+		"Liberare un Astral dalla squadra fallisce."
+	)
+	_expect(
+		roster.get_astral_count() == 5
+		and roster.get_total_astral_count() == 6,
+		"Liberare dalla squadra non aggiorna i conteggi."
+	)
+
+	var saved_data := roster.get_save_data()
+	_expect(
+		int(saved_data.get("format_version", 0)) == 2,
+		"Il salvataggio Box non espone il formato versionato."
+	)
+	var restored := ASTRAL_ROSTER_SCENE.instantiate() as AstralRoster
+	root.add_child(restored)
+	await process_frame
+	_expect(restored.load_save_data(saved_data), "Ripristino dei Box fallito.")
+	_expect(
+		restored.get_astral_count() == roster.get_astral_count()
+		and restored.get_total_astral_count() == roster.get_total_astral_count(),
+		"Il round-trip non conserva squadra e archivio."
+	)
+	_expect(
+		restored.get_box_astral(0, 1) != null
+		and restored.get_box_astral(0, 1).definition.astral_id
+		== roster.get_box_astral(0, 1).definition.astral_id,
+		"Il round-trip non conserva la posizione nel Box."
+	)
+	while restored.get_astral_count() > 1:
+		_expect(restored.release_party_astral(1), "Liberazione squadra valida rifiutata.")
+	_expect(
+		not restored.release_party_astral(0),
+		"Il sistema permette di liberare l'ultimo Astral della squadra."
+	)
+
+	var legacy := ASTRAL_ROSTER_SCENE.instantiate() as AstralRoster
+	root.add_child(legacy)
+	await process_frame
+	_expect(
+		legacy.load_save_data([roster.get_active_astral().get_save_data()]),
+		"Il nuovo roster non carica il formato salvataggio legacy."
+	)
+	_expect(
+		legacy.get_astral_count() == 1 and legacy.get_total_astral_count() == 1,
+		"La migrazione legacy produce Astral aggiuntivi."
+	)
+
+	roster.queue_free()
+	restored.queue_free()
+	legacy.queue_free()
 	await process_frame
 
 
@@ -1372,7 +1768,7 @@ func _test_battle_math() -> void:
 	var fire_attacker := _make_test_astral_instance(fire_definition, 10)
 	var nature_defender := _make_test_astral_instance(nature_definition, 5)
 	_expect(
-		BattleMath.calculate_damage(fire_attacker, nature_defender, fire_move) == 6,
+		BattleMath.calculate_damage(fire_attacker, nature_defender, fire_move) == 8,
 		"BattleMath non combina STAB e superefficacia."
 	)
 
@@ -1422,12 +1818,12 @@ func _test_battle_math() -> void:
 		"La mossa fisica non usa Atk e PDef."
 	)
 	_expect(
-		BattleMath.calculate_damage(mixed_attacker, mixed_defender, magical_move) == 14,
+		BattleMath.calculate_damage(mixed_attacker, mixed_defender, magical_move) == 8,
 		"La mossa magica non usa Atkm e MDef."
 	)
 
 	var scaling_modifiers := BattleMath.DamageModifiers.new()
-	scaling_modifiers.attack_stat_modifier = 3.0
+	scaling_modifiers.attack_stat_modifier = 12.0
 	var scaled_result := BattleMath.calculate_damage_result(
 		mixed_attacker,
 		mixed_defender,
@@ -1438,7 +1834,7 @@ func _test_battle_math() -> void:
 	)
 	_expect(
 		scaled_result.effective_attack == 75
-		and scaled_result.effective_defense == 5,
+		and scaled_result.effective_defense == 2,
 		"A > 255 non divide A e D per quattro con floor."
 	)
 	var critical_result := BattleMath.calculate_damage_result(
@@ -1450,8 +1846,8 @@ func _test_battle_math() -> void:
 		scaling_modifiers
 	)
 	_expect(
-		critical_result.effective_attack == 100
-		and critical_result.effective_defense == 20
+		critical_result.effective_attack == 25
+		and critical_result.effective_defense == 9
 		and critical_result.is_critical_hit,
 		"Il brutto colpo non ignora i modificatori delle statistiche."
 	)
@@ -1817,11 +2213,51 @@ func _create_battle_fixture() -> Dictionary:
 	fixture_root.add_child(roster)
 	fixture_root.add_child(battle)
 
+	var battle_moves: Array[AstralMoveDefinition] = []
+	for cooldown: int in 4:
+		var move := _make_test_move(
+			StringName("fixture_move_%d" % cooldown),
+			"Mossa Fixture %d" % cooldown,
+			35 + cooldown * 15,
+			&"neutro"
+		)
+		move.cooldown_turns = cooldown
+		battle_moves.append(move)
+	var player_definition := _make_test_astral_definition(
+		&"fixture_player",
+		"Astral alleato",
+		120,
+		85,
+		55,
+		&"neutro",
+		&"",
+		25,
+		battle_moves
+	)
+	var wild_definition := _make_test_astral_definition(
+		&"fixture_wild",
+		"Astral selvatico",
+		120,
+		80,
+		50,
+		&"neutro",
+		&"",
+		40,
+		battle_moves
+	)
+	var active_astral := roster.get_active_astral()
+	if active_astral != null:
+		active_astral.setup(
+			player_definition,
+			10,
+			AstralInstance.Sex.MALE
+		)
+
 	_battle_outcome = &""
 	_captured_astral = null
 	battle.action_delay = 0.0
 	battle.battle_finished.connect(_on_test_battle_finished)
-	battle.setup(inventory, roster, WILD_ASTRAL)
+	battle.setup(inventory, roster, wild_definition, 10)
 	battle.set_damage_random_seed(BATTLE_TEST_RANDOM_SEED)
 	battle.begin()
 	var command_ready := await _wait_for_battle_state(
@@ -1882,6 +2318,16 @@ func _test_battle_fight() -> void:
 		_fail("Astral mancanti nel test Lotta.")
 		await _cleanup_battle_fixture(fixture)
 		return
+	var player_forward := -battle.player_visual.global_transform.basis.z.normalized()
+	var opponent_forward := -battle.wild_visual.global_transform.basis.z.normalized()
+	_expect(
+		player_forward.dot(Vector3.RIGHT) > 0.99,
+		"L'Astral della squadra non guarda verso destra."
+	)
+	_expect(
+		opponent_forward.dot(Vector3.LEFT) > 0.99,
+		"L'Astral avversario non guarda verso sinistra."
+	)
 
 	var player_move: AstralMoveDefinition = player_astral.get_move(0)
 	var wild_move: AstralMoveDefinition = wild_astral.get_move(0)
@@ -2314,7 +2760,7 @@ func _test_battle_switch() -> void:
 		await _cleanup_battle_fixture(fixture)
 		return
 
-	var reserve_source := _make_test_astral_instance(PLAYER_ASTRAL, 3)
+	var reserve_source := _make_test_astral_instance(_player_astral, 5)
 	reserve_source.experience = 41
 	_expect(roster.capture_astral(reserve_source), "Scambia non prepara la riserva.")
 	var reserve: AstralInstance = roster.get_astral(1)
@@ -2379,7 +2825,7 @@ func _test_battle_forced_switch() -> void:
 		await _cleanup_battle_fixture(fixture)
 		return
 
-	var reserve_source := _make_test_astral_instance(PLAYER_ASTRAL, 3)
+	var reserve_source := _make_test_astral_instance(_player_astral, 5)
 	reserve_source.experience = 29
 	_expect(
 		roster.capture_astral(reserve_source),
@@ -2634,8 +3080,15 @@ func _test_world_npcs(main: Node) -> void:
 	var world_map := main.get_node_or_null("WorldMap") as VerdantValley
 	var player := main.get_node_or_null("Player") as CharacterBody3D
 	var profile := main.get_node_or_null("PlayerProfile") as PlayerProfile
+	var inventory := main.get_node_or_null("Inventory") as Inventory
 	var game_ui := main.get_node_or_null("GameUI") as GameUI
-	if world_map == null or player == null or profile == null or game_ui == null:
+	if (
+		world_map == null
+		or player == null
+		or profile == null
+		or inventory == null
+		or game_ui == null
+	):
 		_fail("Impossibile verificare gli NPC della Valle Verde.")
 		return
 	var npcs: Array[WorldNpc] = world_map.get_world_npcs()
@@ -2663,6 +3116,11 @@ func _test_world_npcs(main: Node) -> void:
 	_expect(
 		gift_npc.florins_gift == 200,
 		"Il secondo NPC non offre 200 Fiorini."
+	)
+	_expect(
+		gift_npc.gift_item_ids
+		== [&"pietrafuoco", &"pietragelo", &"pietranatura"],
+		"L'NPC benefattore non offre le tre pietre evolutive."
 	)
 	for npc: WorldNpc in npcs:
 		_expect(
@@ -2724,6 +3182,9 @@ func _test_world_npcs(main: Node) -> void:
 		"Il player non rileva il secondo NPC come bersaglio interagibile."
 	)
 	var initial_florins := profile.florins
+	var initial_stones: Dictionary[StringName, int] = {}
+	for stone_id: StringName in gift_npc.gift_item_ids:
+		initial_stones[stone_id] = inventory.get_quantity(stone_id)
 	_expect(detector.try_interact(), "Interazione con l'NPC benefattore non riuscita.")
 	_expect(
 		profile.florins == mini(
@@ -2736,7 +3197,16 @@ func _test_world_npcs(main: Node) -> void:
 		game_ui.notification_toast.has_pending_message("200 Fiorini"),
 		"Il dono di Fiorini non viene comunicato al giocatore."
 	)
+	for stone_id: StringName in gift_npc.gift_item_ids:
+		_expect(
+			inventory.get_quantity(stone_id)
+			== mini(initial_stones[stone_id] + 1, 10),
+			"L'NPC non regala correttamente %s." % stone_id
+		)
 	var florins_after_gift := profile.florins
+	var stones_after_gift: Dictionary[StringName, int] = {}
+	for stone_id: StringName in gift_npc.gift_item_ids:
+		stones_after_gift[stone_id] = inventory.get_quantity(stone_id)
 	for _frame_index: int in 8:
 		await physics_frame
 	_expect(detector.try_interact(), "Il secondo dialogo con l'NPC non riesce.")
@@ -2744,6 +3214,11 @@ func _test_world_npcs(main: Node) -> void:
 		profile.florins == florins_after_gift,
 		"L'NPC regala più volte gli stessi Fiorini."
 	)
+	for stone_id: StringName in gift_npc.gift_item_ids:
+		_expect(
+			inventory.get_quantity(stone_id) == stones_after_gift[stone_id],
+			"L'NPC regala più volte %s." % stone_id
+		)
 	for _frame_index: int in 8:
 		await physics_frame
 
@@ -2766,6 +3241,177 @@ func _test_world_npcs(main: Node) -> void:
 	player.global_position = world_map.get_spawn_position()
 	player.velocity = Vector3.ZERO
 	await physics_frame
+
+
+func _test_map_transpositions(main: Node) -> void:
+	var player := main.get_node_or_null("Player") as CharacterBody3D
+	var detector: PlayerInteractionDetector = null
+	if player != null:
+		detector = player.get_node_or_null(
+			"InteractionDetector"
+		) as PlayerInteractionDetector
+	var initial_map := main.get_node_or_null("WorldMap") as VerdantValley
+	var save_manager := main.get_node_or_null("SaveManager") as SaveManager
+	if player == null or detector == null or initial_map == null or save_manager == null:
+		_fail("Impossibile preparare il test delle transposizioni.")
+		return
+	var persistent_nodes: Array[Node] = [
+		player,
+		main.get_node("Inventory"),
+		main.get_node("AstralRoster"),
+		main.get_node("Grimoire"),
+		main.get_node("PlayerProfile"),
+		save_manager,
+		main.get_node("GameUI"),
+	]
+	_expect(
+		main.call("get_current_map_id") == &"verdant_forest",
+		"La mappa iniziale non espone l'ID verdant_forest."
+	)
+	var forest_portal := initial_map.get_node_or_null(
+		"TransitionPortal"
+	) as MapTransitionPortal
+	_expect(forest_portal != null, "Portale della foresta mancante.")
+	if forest_portal == null:
+		return
+	_expect(
+		forest_portal.destination_map_id == &"large_island",
+		"Il portale della foresta non punta alla Grande Isola."
+	)
+	var previous_fade_duration := float(main.get("battle_fade_duration"))
+	main.set("battle_fade_duration", 0.0)
+	var forest_interaction_position := forest_portal.global_position + Vector3.FORWARD * 2.0
+	forest_interaction_position.y = initial_map.get_terrain_height(
+		forest_interaction_position.x,
+		forest_interaction_position.z
+	) + 1.15
+	player.global_position = forest_interaction_position
+	player.velocity = Vector3.ZERO
+	await physics_frame
+	await physics_frame
+	_expect(
+		detector.current_target == forest_portal.interaction_area,
+		"Il portale della foresta non viene rilevato dall'interazione E."
+	)
+	_expect(detector.try_interact(), "Interazione col portale della foresta fallita.")
+	_expect(
+		player.has_movement_lock(&"map_transition"),
+		"La transposizione non blocca subito il movimento."
+	)
+	var reached_island := false
+	for _frame_index: int in 240:
+		await process_frame
+		if (
+			main.call("get_current_map_id") == &"large_island"
+			and not player.has_movement_lock(&"map_transition")
+		):
+			reached_island = true
+			break
+	_expect(reached_island, "Il portale non raggiunge large_island.")
+	if not reached_island:
+		main.set("battle_fade_duration", previous_fade_duration)
+		return
+	var island_map := main.get_node_or_null("WorldMap") as LargeIsland
+	if island_map != null:
+		_expect(
+			island_map.map_size.is_equal_approx(Vector2(150.0, 150.0)),
+			"La Grande Isola non e stata ridotta del 50% lineare."
+		)
+		_expect(
+			island_map.palm_count == 11
+			and island_map.rock_count == 7
+			and island_map.driftwood_count == 4,
+			"La densita dell'isola ridotta non e stata riequilibrata."
+		)
+	_expect(island_map != null, "WorldMap non è diventata LargeIsland.")
+	_expect(
+		main.get("world_map") == island_map,
+		"Main conserva un riferimento obsoleto dopo la transposizione."
+	)
+	_expect(
+		save_manager.get_current_map_id() == &"large_island",
+		"SaveManager non segue la mappa corrente."
+	)
+	for persistent_node: Node in persistent_nodes:
+		_expect(
+			is_instance_valid(persistent_node) and persistent_node.get_parent() == main,
+			"La transposizione ha ricreato o rimosso uno stato globale di Main."
+		)
+	if island_map == null:
+		main.set("battle_fade_duration", previous_fade_duration)
+		return
+	var island_spawn := island_map.get_spawn_position(&"from_verdant_forest")
+	_expect(
+		Vector2(player.global_position.x, player.global_position.z).distance_to(
+			Vector2(island_spawn.x, island_spawn.z)
+		) < 0.2,
+		"Il player non arriva allo spawn del portale sull'isola."
+	)
+	var island_portal := island_map.get_node_or_null(
+		"TransitionPortal"
+	) as MapTransitionPortal
+	_expect(island_portal != null, "Portale di ritorno dell'isola mancante.")
+	if island_portal == null:
+		main.set("battle_fade_duration", previous_fade_duration)
+		return
+	_expect(
+		island_portal.destination_map_id == &"verdant_forest",
+		"Il portale dell'isola non punta alla foresta."
+	)
+	var island_interaction_position := island_portal.global_position + Vector3.BACK * 2.0
+	island_interaction_position.y = island_map.get_terrain_height(
+		island_interaction_position.x,
+		island_interaction_position.z
+	) + 1.15
+	player.global_position = island_interaction_position
+	player.velocity = Vector3.ZERO
+	await physics_frame
+	await physics_frame
+	_expect(
+		detector.current_target == island_portal.interaction_area,
+		"Il portale dell'isola non viene rilevato dall'interazione E."
+	)
+	_expect(detector.try_interact(), "Interazione col portale dell'isola fallita.")
+	var returned_to_forest := false
+	for _frame_index: int in 240:
+		await process_frame
+		if (
+			main.call("get_current_map_id") == &"verdant_forest"
+			and not player.has_movement_lock(&"map_transition")
+		):
+			returned_to_forest = true
+			break
+	_expect(returned_to_forest, "Il portale dell'isola non riporta alla foresta.")
+	var returned_map := main.get_node_or_null("WorldMap") as VerdantValley
+	_expect(returned_map != null, "Il ritorno non ricrea VerdantValley.")
+	if returned_map != null:
+		_expect(
+			returned_map == initial_map,
+			"Il ritorno ricrea la foresta e perde il suo stato runtime."
+		)
+		var returned_trainers := returned_map.get_trainers()
+		var returned_npcs := returned_map.get_world_npcs()
+		_expect(
+			not returned_trainers.is_empty() and returned_trainers[0].defeated,
+			"La transposizione resetta gli allenatori sconfitti."
+		)
+		_expect(
+			returned_npcs.size() > 1 and returned_npcs[1].gift_claimed,
+			"La transposizione resetta i doni già riscossi dagli NPC."
+		)
+		var forest_spawn := returned_map.get_spawn_position(&"from_large_island")
+		_expect(
+			Vector2(player.global_position.x, player.global_position.z).distance_to(
+				Vector2(forest_spawn.x, forest_spawn.z)
+			) < 0.2,
+			"Il player non arriva allo spawn di ritorno nella foresta."
+		)
+	_expect(not paused, "Il mondo resta in pausa dopo la transposizione.")
+	_expect(
+		save_manager.get_current_map_id() == &"verdant_forest",
+		"SaveManager non torna all'ID della foresta."
+	)
+	main.set("battle_fade_duration", previous_fade_duration)
 
 
 func _test_tall_grass_response(main: Node) -> void:
@@ -2863,6 +3509,9 @@ func _test_inventory_data() -> void:
 		"pietra": false,
 		"fungo": true,
 		"bacca": true,
+		"pietrafuoco": true,
+		"pietragelo": true,
+		"pietranatura": true,
 	}
 	for item_id: String in expected_consumability:
 		var resource_path := "res://data/items/%s.tres" % item_id
@@ -2875,6 +3524,11 @@ func _test_inventory_data() -> void:
 		var expected_value: bool = expected_consumability[item_id]
 		var actual_value := bool(definition.get("consumable"))
 		_expect(actual_value == expected_value, "Consumabilità errata: %s." % item_id)
+		if item_id.begins_with("pietra") and item_id != "pietra":
+			_expect(
+				bool(definition.get("requires_astral_target")),
+				"La pietra evolutiva %s non richiede un Astral bersaglio." % item_id
+			)
 
 
 func _test_inputs() -> void:
@@ -2894,6 +3548,11 @@ func _test_inputs() -> void:
 	_expect(
 		_action_uses_physical_key(&"toggle_squad", KEY_I),
 		"L'input Squadra non usa il tasto fisico I."
+	)
+	_expect(InputMap.has_action("toggle_astral_box"), "Input Box Astral mancante.")
+	_expect(
+		_action_uses_physical_key(&"toggle_astral_box", KEY_B),
+		"L'input Box Astral non usa il tasto fisico B."
 	)
 
 

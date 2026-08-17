@@ -1,0 +1,215 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/ui/box/astral_box_screen.gd" id="1_box"]
+
+[node name="AstralBoxScreen" type="Control"]
+visible = false
+process_mode = 3
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+script = ExtResource("1_box")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0.025, 0.045, 0.075, 0.97)
+
+[node name="OuterMargin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 32.0
+offset_top = 26.0
+offset_right = -32.0
+offset_bottom = -26.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="MainPanel" type="PanelContainer" parent="OuterMargin"]
+layout_mode = 2
+
+[node name="PanelMargin" type="MarginContainer" parent="OuterMargin/MainPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 20
+
+[node name="MainVBox" type="VBoxContainer" parent="OuterMargin/MainPanel/PanelMargin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Header" type="HBoxContainer" parent="OuterMargin/MainPanel/PanelMargin/MainVBox"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="OuterMargin/MainPanel/PanelMargin/MainVBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 30
+text = "Archivio Astral"
+
+[node name="PreviousBoxButton" type="Button" parent="OuterMargin/MainPanel/PanelMargin/MainVBox/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(54, 44)
+layout_mode = 2
+text = "◀"
+
+[node name="BoxLabel" type="Label" parent="OuterMargin/MainPanel/PanelMargin/MainVBox/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(170, 44)
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "BOX 01 / 50"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="NextBoxButton" type="Button" parent="OuterMargin/MainPanel/PanelMargin/MainVBox/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(54, 44)
+layout_mode = 2
+text = "▶"
+
+[node name="Content" type="HSplitContainer" parent="OuterMargin/MainPanel/PanelMargin/MainVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+split_offset = 245
+
+[node name="PartyPanel" type="VBoxContainer" parent="OuterMargin/MainPanel/PanelMargin/MainVBox/Content"]
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PartyTitle" type="Label" parent="OuterMargin/MainPanel/PanelMargin/MainVBox/Content/PartyPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Squadra (massimo 6)"
+
+[node name="PartyList" type="ItemList" parent="OuterMargin/MainPanel/PanelMargin/MainVBox/Content/PartyPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(250, 380)
+layout_mode = 2
+size_flags_vertical = 3
+allow_reselect = true
+
+[node name="BoxAndDetails" type="HSplitContainer" parent="OuterMargin/MainPanel/PanelMargin/MainVBox/Content"]
+layout_mode = 2
+size_flags_horizontal = 3
+split_offset = 520
+
+[node name="BoxPanel" type="VBoxContainer" parent="OuterMargin/MainPanel/PanelMargin/MainVBox/Content/BoxAndDetails"]
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BoxTitle" type="Label" parent="OuterMargin/MainPanel/PanelMargin/MainVBox/Content/BoxAndDetails/BoxPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Deposito — 30 slot"
+
+[node name="BoxList" type="ItemList" parent="OuterMargin/MainPanel/PanelMargin/MainVBox/Content/BoxAndDetails/BoxPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 440)
+layout_mode = 2
+size_flags_vertical = 3
+allow_reselect = true
+max_columns = 5
+same_column_width = true
+fixed_column_width = 88
+fixed_icon_size = Vector2i(0, 0)
+icon_mode = 0
+
+[node name="DetailsPanel" type="VBoxContainer" parent="OuterMargin/MainPanel/PanelMargin/MainVBox/Content/BoxAndDetails"]
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="DetailsTitle" type="Label" parent="OuterMargin/MainPanel/PanelMargin/MainVBox/Content/BoxAndDetails/DetailsPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Scheda Astral"
+
+[node name="DetailsLabel" type="Label" parent="OuterMargin/MainPanel/PanelMargin/MainVBox/Content/BoxAndDetails/DetailsPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 180)
+layout_mode = 2
+text = "Nessun Astral selezionato.\n\nOggetto equipaggiato: —"
+autowrap_mode = 2
+
+[node name="DepositButton" type="Button" parent="OuterMargin/MainPanel/PanelMargin/MainVBox/Content/BoxAndDetails/DetailsPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Deposita"
+
+[node name="WithdrawButton" type="Button" parent="OuterMargin/MainPanel/PanelMargin/MainVBox/Content/BoxAndDetails/DetailsPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Ritira"
+
+[node name="SwapButton" type="Button" parent="OuterMargin/MainPanel/PanelMargin/MainVBox/Content/BoxAndDetails/DetailsPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Scambia squadra / Box"
+
+[node name="MoveButton" type="Button" parent="OuterMargin/MainPanel/PanelMargin/MainVBox/Content/BoxAndDetails/DetailsPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Sposta"
+
+[node name="EquipButton" type="Button" parent="OuterMargin/MainPanel/PanelMargin/MainVBox/Content/BoxAndDetails/DetailsPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+disabled = true
+text = "Equipaggia (prossimamente)"
+
+[node name="EvolveButton" type="Button" parent="OuterMargin/MainPanel/PanelMargin/MainVBox/Content/BoxAndDetails/DetailsPanel"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+disabled = true
+text = "Evolvi"
+
+[node name="ReleaseButton" type="Button" parent="OuterMargin/MainPanel/PanelMargin/MainVBox/Content/BoxAndDetails/DetailsPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Libera definitivamente"
+
+[node name="Spacer" type="Control" parent="OuterMargin/MainPanel/PanelMargin/MainVBox/Content/BoxAndDetails/DetailsPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="BackButton" type="Button" parent="OuterMargin/MainPanel/PanelMargin/MainVBox/Content/BoxAndDetails/DetailsPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+text = "Indietro"
+
+[node name="StatusLabel" type="Label" parent="OuterMargin/MainPanel/PanelMargin/MainVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Seleziona un Astral per gestirlo. Usa Sposta per trasferirlo fra Box diversi."
+horizontal_alignment = 1
+
+[node name="ReleaseConfirmation" type="ConfirmationDialog" parent="."]
+title = "Conferma liberazione"
+ok_button_text = "Libera"
+cancel_button_text = "Annulla"
+dialog_text = "Liberare definitivamente questo Astral?"
+
+[node name="EvolutionMenu" type="PopupMenu" parent="."]
+title = "Scegli evoluzione"

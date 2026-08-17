@@ -7,3 +7,4 @@ extends Resource
 @export var category: StringName = &"object"
 @export_range(1, 999, 1) var max_quantity: int = 10
 @export var consumable: bool = false
+@export var requires_astral_target: bool = false

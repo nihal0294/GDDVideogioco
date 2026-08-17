@@ -19,6 +19,11 @@ signal npc_florins_gift_requested(
 	actor: CharacterBody3D,
 	amount: int
 )
+signal map_transition_requested(
+	destination_map_id: StringName,
+	destination_spawn_id: StringName,
+	actor: CharacterBody3D
+)
 
 const VEGETATION_WIND_SCRIPT := preload(
 	"res://game/world/environment/vegetation_wind.gd"
@@ -35,11 +40,8 @@ const TRAINER_SCENE: PackedScene = preload(
 const WORLD_NPC_SCENE: PackedScene = preload(
 	"res://game/npcs/world_npc.tscn"
 )
-const TRAINER_ASTRALS: Array[AstralDefinition] = [
-	preload("res://data/astrals/wyrm_di_lava.tres"),
-	preload("res://data/astrals/topo_onda.tres"),
-	preload("res://data/astrals/orso_fatato.tres"),
-	preload("res://data/astrals/slime_arcobaleno.tres"),
+const TRAINER_ASTRAL_IDS: Array[StringName] = [
+	&"flambore", &"vorix", &"panthor", &"silphy",
 ]
 const TRAINER_LINES: Array[String] = [
 	"Magliettina di Prada. Leggera.. mica tarocca eh! Originale!",
@@ -71,6 +73,7 @@ const WORLD_NPC_DIALOGUES: Array[String] = [
 const WORLD_NPC_NAMES: Array[String] = ["Mastro Elio", "Ser Fiorenzo"]
 const WORLD_NPC_COLORS: Array[Color] = [Color("a56f3f"), Color("d2a33f")]
 const WORLD_NPC_GROUP_Z: float = -20.0
+const TRANSITION_PORTAL_Z: float = 66.0
 
 @export_group("Wind")
 @export_range(0.0, 2.0, 0.05) var wind_strength: float = 1.0
@@ -202,6 +205,7 @@ const MEADOW_COLOR := Color("91c955")
 @onready var interactables_container: Node3D = $Interactables
 @onready var trainers_container: Node3D = $Trainers
 @onready var npcs_container: Node3D = $Npcs
+@onready var transition_portal: MapTransitionPortal = $TransitionPortal
 
 var _height_noise := FastNoiseLite.new()
 var _detail_noise := FastNoiseLite.new()
@@ -224,16 +228,61 @@ func _ready() -> void:
 	_build_multimeshes()
 	_setup_trainers()
 	_setup_world_npcs()
+	_setup_transition_portal()
 	generation_finished.emit()
 
 
-func get_spawn_position() -> Vector3:
+func get_map_id() -> StringName:
+	return &"verdant_forest"
+
+
+func get_location_name() -> String:
+	return "Foresta Verdeggiante"
+
+
+func get_spawn_position(spawn_id: StringName = &"default") -> Vector3:
+	if spawn_id == &"from_large_island":
+		var portal_spawn_z := TRANSITION_PORTAL_Z + 4.0
+		var portal_spawn_x := get_path_center_x(portal_spawn_z)
+		return Vector3(
+			portal_spawn_x,
+			get_terrain_height(portal_spawn_x, portal_spawn_z) + 1.15,
+			portal_spawn_z
+		)
 	var spawn_z := map_size.y * 0.5 - 13.0
 	var spawn_x := get_path_center_x(spawn_z)
 	return Vector3(
 		spawn_x,
 		get_terrain_height(spawn_x, spawn_z) + 1.15,
 		spawn_z
+	)
+
+
+func _setup_transition_portal() -> void:
+	var portal_x := get_path_center_x(TRANSITION_PORTAL_Z)
+	transition_portal.position = Vector3(
+		portal_x,
+		get_terrain_height(portal_x, TRANSITION_PORTAL_Z) + 0.04,
+		TRANSITION_PORTAL_Z
+	)
+	if not transition_portal.transition_requested.is_connected(
+		_on_transition_portal_requested
+	):
+		transition_portal.transition_requested.connect(
+			_on_transition_portal_requested
+		)
+
+
+func _on_transition_portal_requested(
+	_portal: MapTransitionPortal,
+	destination_map_id: StringName,
+	destination_spawn_id: StringName,
+	actor: CharacterBody3D
+) -> void:
+	map_transition_requested.emit(
+		destination_map_id,
+		destination_spawn_id,
+		actor
 	)
 
 
@@ -434,7 +483,9 @@ func _setup_trainers() -> void:
 		trainer.npc_id = &"verdant_trainer_%02d" % (trainer_index + 1)
 		trainer.display_name = "Allenatore %d" % (trainer_index + 1)
 		trainer.challenge_line = TRAINER_LINES[trainer_index]
-		trainer.astral_definition = TRAINER_ASTRALS[trainer_index]
+		trainer.astral_definition = AstralCatalog.load_definition(
+			TRAINER_ASTRAL_IDS[trainer_index]
+		)
 		trainer.astral_level = 5
 		trainer.reward_florins = TRAINER_REWARD_FLORINS[trainer_index]
 		trainer.reward_item_id = TRAINER_REWARD_ITEMS[trainer_index]
@@ -492,6 +543,13 @@ func _setup_world_npcs() -> void:
 		npc.display_name = WORLD_NPC_NAMES[npc_index]
 		npc.dialogue_line = WORLD_NPC_DIALOGUES[npc_index]
 		npc.florins_gift = 200 if npc_index == 1 else 0
+		if npc_index == 1:
+			npc.gift_item_ids = [
+				&"pietrafuoco",
+				&"pietragelo",
+				&"pietranatura",
+			]
+			npc.gift_item_amounts = [1, 1, 1]
 		npc.position = Vector3(
 			world_x,
 			get_terrain_height(world_x, WORLD_NPC_GROUP_Z) + 0.08,

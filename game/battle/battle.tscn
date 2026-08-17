@@ -1,6 +1,7 @@
 [gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://game/battle/battle_controller.gd" id="1_controller"]
+[ext_resource type="Script" path="res://game/astrals/astral_model_3d.gd" id="2_model"]
 
 [sub_resource type="Environment" id="Environment_arena"]
 background_mode = 1
@@ -16,10 +17,6 @@ roughness = 0.9
 [sub_resource type="PlaneMesh" id="Mesh_ground"]
 material = SubResource("Material_ground")
 size = Vector2(24, 18)
-
-[sub_resource type="CapsuleMesh" id="Mesh_astral"]
-radius = 0.75
-height = 2.4
 
 [sub_resource type="StandardMaterial3D" id="Material_player_platform"]
 albedo_color = Color(0.15, 0.42, 0.62, 1)
@@ -112,21 +109,17 @@ position = Vector3(3.1, 0.14, -0.6)
 layers = 2
 mesh = SubResource("Mesh_wild_platform")
 
-[node name="PlayerMonster" type="MeshInstance3D" parent="Arena"]
+[node name="PlayerMonster" type="Node3D" parent="Arena"]
 unique_name_in_owner = true
-position = Vector3(-3.1, 1.34, 1.1)
-rotation = Vector3(0, -0.35, 0)
-layers = 2
-cast_shadow = 1
-mesh = SubResource("Mesh_astral")
+position = Vector3(-3.1, 0.28, 1.1)
+rotation = Vector3(0, -1.570796, 0)
+script = ExtResource("2_model")
 
-[node name="WildMonster" type="MeshInstance3D" parent="Arena"]
+[node name="WildMonster" type="Node3D" parent="Arena"]
 unique_name_in_owner = true
-position = Vector3(3.1, 1.34, -0.6)
-rotation = Vector3(0, 2.8, 0)
-layers = 2
-cast_shadow = 1
-mesh = SubResource("Mesh_astral")
+position = Vector3(3.1, 0.28, -0.6)
+rotation = Vector3(0, 1.570796, 0)
+script = ExtResource("2_model")
 
 [node name="BattleUI" type="CanvasLayer" parent="."]
 layer = 90

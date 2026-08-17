@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/inventory/item_definition.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+item_id = &"pietragelo"
+display_name = "Pietragelo"
+description = "Una pietra gelida che permette a Pandalith di evolversi in Frostalith dal livello 30. Usala da Squadra o Box."
+category = &"object"
+max_quantity = 10
+consumable = true
+requires_astral_target = true

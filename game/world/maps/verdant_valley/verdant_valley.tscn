@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://game/world/maps/verdant_valley/verdant_valley.gd" id="1_map"]
+[ext_resource type="PackedScene" path="res://game/world/transitions/map_transition_portal.tscn" id="2_portal"]
 
 [node name="VerdantValley" type="Node3D"]
 script = ExtResource("1_map")
@@ -22,3 +23,9 @@ collision_mask = 0
 [node name="Trainers" type="Node3D" parent="."]
 
 [node name="Npcs" type="Node3D" parent="."]
+
+[node name="TransitionPortal" parent="." instance=ExtResource("2_portal")]
+portal_id = &"verdant_to_large_island"
+display_name = "Portale per la Grande Isola"
+destination_map_id = &"large_island"
+destination_spawn_id = &"from_verdant_forest"

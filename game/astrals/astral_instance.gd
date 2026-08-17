@@ -4,6 +4,8 @@ extends Resource
 signal experience_changed(current_experience: int, required_experience: int)
 signal leveled_up(previous_level: int, new_level: int)
 signal moves_changed()
+signal evolution_available()
+signal evolved(previous_definition: AstralDefinition, new_definition: AstralDefinition)
 
 enum Sex {
 	MALE,
@@ -12,13 +14,20 @@ enum Sex {
 
 const EXPERIENCE_PER_LEVEL: int = 100
 const MAX_MOVE_COUNT: int = 4
-const MAX_LEVEL: int = 999
+const MAX_LEVEL: int = 100
 
 @export var definition: AstralDefinition
-@export_range(1, 999, 1) var level: int = 1
+@export_range(1, 100, 1) var level: int = 1
 @export var current_health: int = 0
 @export_range(0, 9999999, 1) var experience: int = 0
 @export_enum("Maschio", "Femmina") var sex: int = Sex.MALE
+@export_group("Soul Core")
+@export_range(0, 5, 1) var health_soul_core: int = 0
+@export_range(0, 5, 1) var attack_soul_core: int = 0
+@export_range(0, 5, 1) var physical_defense_soul_core: int = 0
+@export_range(0, 5, 1) var magic_attack_soul_core: int = 0
+@export_range(0, 5, 1) var magic_defense_soul_core: int = 0
+@export_range(0, 5, 1) var speed_soul_core: int = 0
 
 @export_storage var _moves: Array[AstralMoveDefinition] = []
 
@@ -42,8 +51,8 @@ func setup(
 	)
 	var starting_moves: Array[AstralMoveDefinition] = []
 	if definition != null:
-		starting_moves.assign(definition.starting_moves)
-	_moves = _copy_limited_moves(starting_moves)
+		starting_moves = definition.get_moves_available_at_level(level)
+	_moves = _latest_limited_moves(starting_moves)
 	reset_health()
 
 
@@ -59,7 +68,56 @@ func setup_with_random(
 
 
 func reset_health() -> void:
-	current_health = definition.max_health if definition != null else 0
+	current_health = get_max_health()
+
+
+func get_max_health() -> int:
+	if definition == null:
+		return 0
+	return (
+		floori(
+			float(2 * definition.max_health + health_soul_core)
+			* float(level)
+			/ 100.0
+		)
+		+ level
+		+ 10
+	)
+
+
+func get_attack_power() -> int:
+	return _calculate_effective_stat(
+		definition.attack_power if definition != null else 0,
+		attack_soul_core
+	)
+
+
+func get_physical_defense() -> int:
+	return _calculate_effective_stat(
+		definition.physical_defense if definition != null else 0,
+		physical_defense_soul_core
+	)
+
+
+func get_magic_attack() -> int:
+	return _calculate_effective_stat(
+		definition.magic_attack if definition != null else 0,
+		magic_attack_soul_core
+	)
+
+
+func get_magic_defense() -> int:
+	return _calculate_effective_stat(
+		definition.magic_defense if definition != null else 0,
+		magic_defense_soul_core
+	)
+
+
+func get_speed() -> int:
+	return _calculate_effective_stat(
+		definition.speed if definition != null else 0,
+		speed_soul_core
+	)
 
 
 func take_damage(amount: int) -> int:
@@ -85,13 +143,18 @@ func gain_experience(amount: int) -> int:
 	experience += amount
 	var levels_gained := 0
 	var required_experience := get_experience_to_next_level()
-	while experience >= required_experience:
+	while experience >= required_experience and level < MAX_LEVEL:
 		experience -= required_experience
 		var previous_level := level
 		level += 1
 		levels_gained += 1
+		_learn_moves_available_at_level(level)
 		leveled_up.emit(previous_level, level)
+		if not get_available_evolutions().is_empty():
+			evolution_available.emit()
 		required_experience = get_experience_to_next_level()
+	if level >= MAX_LEVEL:
+		experience = 0
 	experience_changed.emit(experience, required_experience)
 	return levels_gained
 
@@ -150,10 +213,16 @@ func duplicate_runtime() -> AstralInstance:
 	runtime_copy.definition = definition
 	runtime_copy.level = maxi(level, 1)
 	runtime_copy.sex = sex
+	runtime_copy.health_soul_core = health_soul_core
+	runtime_copy.attack_soul_core = attack_soul_core
+	runtime_copy.physical_defense_soul_core = physical_defense_soul_core
+	runtime_copy.magic_attack_soul_core = magic_attack_soul_core
+	runtime_copy.magic_defense_soul_core = magic_defense_soul_core
+	runtime_copy.speed_soul_core = speed_soul_core
 	runtime_copy.current_health = clampi(
 		current_health,
 		0,
-		definition.max_health if definition != null else 0
+		runtime_copy.get_max_health()
 	)
 	runtime_copy.experience = maxi(experience, 0)
 	runtime_copy._moves = runtime_copy._copy_limited_moves(_moves)
@@ -172,6 +241,14 @@ func get_save_data() -> Dictionary:
 		"experience": experience,
 		"sex": sex,
 		"move_ids": move_ids,
+		"soul_core": [
+			health_soul_core,
+			attack_soul_core,
+			physical_defense_soul_core,
+			magic_attack_soul_core,
+			magic_defense_soul_core,
+			speed_soul_core,
+		],
 	}
 
 
@@ -206,19 +283,26 @@ func load_save_data(
 		),
 		saved_sex
 	)
-	current_health = clampi(
-		_validated_int(
-			data.get("current_health", source_definition.max_health),
-			source_definition.max_health
-		),
-		0,
-		source_definition.max_health
+	var saved_health := _validated_int(
+		data.get("current_health", get_max_health()),
+		get_max_health()
 	)
 	experience = clampi(
 		_validated_int(data.get("experience", 0), 0),
 		0,
 		EXPERIENCE_PER_LEVEL - 1
 	)
+	var soul_core_value: Variant = data.get("soul_core", [])
+	if soul_core_value is Array:
+		var soul_core_values := soul_core_value as Array
+		if soul_core_values.size() >= 6:
+			health_soul_core = clampi(_validated_int(soul_core_values[0], 0), 0, 5)
+			attack_soul_core = clampi(_validated_int(soul_core_values[1], 0), 0, 5)
+			physical_defense_soul_core = clampi(_validated_int(soul_core_values[2], 0), 0, 5)
+			magic_attack_soul_core = clampi(_validated_int(soul_core_values[3], 0), 0, 5)
+			magic_defense_soul_core = clampi(_validated_int(soul_core_values[4], 0), 0, 5)
+			speed_soul_core = clampi(_validated_int(soul_core_values[5], 0), 0, 5)
+	current_health = clampi(saved_health, 0, get_max_health())
 
 	var raw_moves: Variant = data.get("move_ids", null)
 	if raw_moves is Array:
@@ -239,6 +323,39 @@ func load_save_data(
 	return true
 
 
+func get_available_evolutions() -> Array[AstralEvolutionOption]:
+	if definition == null:
+		return []
+	return definition.get_available_evolutions(level)
+
+
+func can_evolve_with(option: AstralEvolutionOption) -> bool:
+	return (
+		option != null
+		and definition != null
+		and definition.evolution_options.has(option)
+		and option.target != null
+		and level >= option.required_level
+	)
+
+
+func evolve_with(option: AstralEvolutionOption) -> bool:
+	if not can_evolve_with(option):
+		return false
+	var previous_definition := definition
+	var previous_max_health := maxi(get_max_health(), 1)
+	var health_ratio := float(current_health) / float(previous_max_health)
+	definition = option.target
+	_learn_moves_available_at_level(level)
+	current_health = clampi(
+		roundi(float(get_max_health()) * health_ratio),
+		1 if current_health > 0 else 0,
+		get_max_health()
+	)
+	evolved.emit(previous_definition, definition)
+	return true
+
+
 static func sex_from_roll(roll: float) -> int:
 	return Sex.MALE if roll < 0.5 else Sex.FEMALE
 
@@ -254,6 +371,47 @@ func _copy_limited_moves(
 		if copied_moves.size() >= MAX_MOVE_COUNT:
 			break
 	return copied_moves
+
+
+func _latest_limited_moves(
+	source_moves: Array[AstralMoveDefinition]
+) -> Array[AstralMoveDefinition]:
+	var unique_moves: Array[AstralMoveDefinition] = []
+	for move: AstralMoveDefinition in source_moves:
+		if move != null and not _contains_move(unique_moves, move):
+			unique_moves.append(move)
+	while unique_moves.size() > MAX_MOVE_COUNT:
+		unique_moves.pop_front()
+	return unique_moves
+
+
+func _learn_moves_available_at_level(target_level: int) -> void:
+	if definition == null:
+		return
+	var available_moves := definition.get_moves_available_at_level(target_level)
+	var move_set_changed := false
+	for move: AstralMoveDefinition in available_moves:
+		if move == null or _contains_move(_moves, move):
+			continue
+		if _moves.size() >= MAX_MOVE_COUNT:
+			_moves.pop_front()
+		_moves.append(move)
+		move_set_changed = true
+	if move_set_changed:
+		moves_changed.emit()
+
+
+func _calculate_effective_stat(base_stat: int, soul_core: int) -> int:
+	if definition == null:
+		return 0
+	return (
+		floori(
+			float(2 * base_stat + clampi(soul_core, 0, 5))
+			* float(level)
+			/ 100.0
+		)
+		+ 5
+	)
 
 
 func _contains_move(

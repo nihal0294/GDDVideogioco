@@ -16,13 +16,20 @@ var _discovery_states: Dictionary[StringName, int] = {}
 var _roster: AstralRoster = null
 
 
+func _ready() -> void:
+	if catalog.is_empty():
+		_build_catalog()
+
+
 func setup(roster: AstralRoster) -> void:
 	_disconnect_roster()
 	_roster = roster
 	if _roster != null:
 		if not _roster.astral_captured.is_connected(_on_astral_captured):
 			_roster.astral_captured.connect(_on_astral_captured)
-		for astral: AstralInstance in _roster.get_astrals():
+		if not _roster.astral_evolved.is_connected(_on_astral_evolved):
+			_roster.astral_evolved.connect(_on_astral_evolved)
+		for astral: AstralInstance in _roster.get_all_astrals():
 			register_captured(astral.definition)
 	catalog_changed.emit()
 
@@ -108,7 +115,7 @@ func load_save_data(data: Dictionary) -> void:
 			continue
 		_discovery_states[entry_id] = state
 	if _roster != null:
-		for astral: AstralInstance in _roster.get_astrals():
+		for astral: AstralInstance in _roster.get_all_astrals():
 			if astral == null or astral.definition == null:
 				continue
 			var astral_id := astral.definition.astral_id
@@ -141,6 +148,14 @@ func _on_astral_captured(astral: AstralInstance) -> void:
 		register_captured(astral.definition)
 
 
+func _on_astral_evolved(
+	_astral: AstralInstance,
+	_previous_definition: AstralDefinition,
+	new_definition: AstralDefinition
+) -> void:
+	register_captured(new_definition)
+
+
 func _disconnect_roster() -> void:
 	if (
 		_roster != null
@@ -148,6 +163,12 @@ func _disconnect_roster() -> void:
 		and _roster.astral_captured.is_connected(_on_astral_captured)
 	):
 		_roster.astral_captured.disconnect(_on_astral_captured)
+	if (
+		_roster != null
+		and is_instance_valid(_roster)
+		and _roster.astral_evolved.is_connected(_on_astral_evolved)
+	):
+		_roster.astral_evolved.disconnect(_on_astral_evolved)
 	_roster = null
 
 
@@ -160,3 +181,20 @@ func _sort_entries_by_number(
 	if second == null:
 		return true
 	return first.entry_number < second.entry_number
+
+
+func _build_catalog() -> void:
+	var entry_number := 1
+	for definition: AstralDefinition in AstralCatalog.load_ordered_definitions():
+		var entry := GrimoireEntry.new()
+		entry.entry_number = entry_number
+		entry.astral = definition
+		if AstralCatalog.WILD_BASE_IDS.has(definition.astral_id):
+			entry.spawn_zones = ["Foresta Verdeggiante - erba alta"]
+			entry.habitat = "Foresta Verdeggiante"
+		else:
+			entry.spawn_zones = ["Ottenibile tramite evoluzione"]
+			entry.habitat = "Dipende dalla forma precedente"
+		entry.field_notes = definition.description
+		catalog.append(entry)
+		entry_number += 1

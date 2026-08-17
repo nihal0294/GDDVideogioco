@@ -19,8 +19,8 @@ enum BattleState {
 
 @export_range(0.0, 2.0, 0.05) var action_delay: float = 0.35
 
-@onready var player_visual: MeshInstance3D = %PlayerMonster
-@onready var wild_visual: MeshInstance3D = %WildMonster
+@onready var player_visual: AstralModel3D = %PlayerMonster
+@onready var wild_visual: AstralModel3D = %WildMonster
 @onready var battle_camera: Camera3D = %BattleCamera
 @onready var player_name_label: Label = %PlayerName
 @onready var wild_name_label: Label = %WildName
@@ -524,9 +524,8 @@ func _resolve_capture() -> void:
 
 	var captured_astral: AstralInstance = null
 	if _roster != null:
-		var captured_index := _roster.get_astral_count()
 		if _roster.capture_astral(_wild_astral):
-			captured_astral = _roster.get_astral(captured_index)
+			captured_astral = _roster.get_last_captured_astral()
 	if captured_astral == null:
 		message_label.text = "Il soulbind non e riuscito."
 		await _wait_for_action()
@@ -741,7 +740,7 @@ func _rebuild_astral_buttons(forced: bool) -> void:
 				PRESENTATION.format_identity(astral),
 				astral.level,
 				astral.current_health,
-				astral.definition.max_health,
+				astral.get_max_health(),
 			]
 			astral_button.pressed.connect(switch_astral.bind(roster_index))
 			astrals_list.add_child(astral_button)
@@ -810,22 +809,19 @@ func _refresh_astral_status(
 	]
 	health_label.text = "HP %d/%d" % [
 		astral.current_health,
-		astral.definition.max_health,
+		astral.get_max_health(),
 	]
-	health_bar.max_value = astral.definition.max_health
+	health_bar.max_value = astral.get_max_health()
 	health_bar.value = astral.current_health
 
 
 func _apply_astral_visual(
-	visual: MeshInstance3D,
+	visual: AstralModel3D,
 	astral: AstralInstance
 ) -> void:
-	if visual == null or astral == null or astral.definition == null:
+	if visual == null:
 		return
-	var material := StandardMaterial3D.new()
-	material.albedo_color = astral.definition.visual_color
-	material.roughness = 0.62
-	visual.material_override = material
+	visual.show_astral(astral)
 
 
 func _set_command_buttons_disabled(disabled: bool) -> void:

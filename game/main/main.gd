@@ -2,27 +2,19 @@ extends Node3D
 
 const BATTLE_SCENE := preload("res://game/battle/battle.tscn")
 const PRESENTATION := preload("res://game/astrals/astral_presentation.gd")
-const WILD_WYRM: AstralDefinition = preload(
-	"res://data/astrals/wyrm_di_lava.tres"
-)
-const WILD_WAVE_MOUSE: AstralDefinition = preload(
-	"res://data/astrals/topo_onda.tres"
-)
-const WILD_FAIRY_BEAR: AstralDefinition = preload(
-	"res://data/astrals/orso_fatato.tres"
-)
-const WILD_RAINBOW_SLIME: AstralDefinition = preload(
-	"res://data/astrals/slime_arcobaleno.tres"
-)
-const WILD_ASTRAL_POOL: Array[AstralDefinition] = [
-	WILD_WYRM,
-	WILD_WAVE_MOUSE,
-	WILD_FAIRY_BEAR,
-	WILD_RAINBOW_SLIME,
-]
+const MAP_SCENES: Dictionary[StringName, PackedScene] = {
+	&"verdant_forest": preload(
+		"res://game/world/maps/verdant_valley/verdant_valley.tscn"
+	),
+	&"large_island": preload(
+		"res://game/world/maps/large_island/large_island.tscn"
+	),
+}
 const BATTLE_PAUSE_LOCK: StringName = &"battle"
 const TRAINER_MOVEMENT_LOCK: StringName = &"trainer_challenge"
 const NPC_DIALOGUE_MOVEMENT_LOCK: StringName = &"npc_dialogue"
+const MAP_TRANSITION_PAUSE_LOCK: StringName = &"map_transition"
+const MAP_TRANSITION_MOVEMENT_LOCK: StringName = &"map_transition"
 
 @export_range(0.0, 2.0, 0.05) var battle_fade_duration: float = 0.35
 @export_range(-10, 0, 1) var wild_level_minimum_offset: int = -1
@@ -51,56 +43,15 @@ var _active_battle: BattleController
 var _active_trainer: TrainerNpc
 var _active_npc: WorldNpc
 var _battle_transitioning: bool = false
+var _map_transitioning: bool = false
 var _encounter_random := RandomNumberGenerator.new()
+var _map_cache: Dictionary[StringName, Node3D] = {}
 
 
 func _ready() -> void:
 	_encounter_random.randomize()
-	if world_map.has_signal("map_interactable_interacted"):
-		world_map.connect(
-			"map_interactable_interacted",
-			_on_map_interactable_interacted
-		)
-	if world_map.has_signal("wild_encounter_requested"):
-		world_map.connect(
-			"wild_encounter_requested",
-			_on_wild_encounter_requested
-		)
-	if world_map.has_signal("trainer_challenge_requested"):
-		world_map.connect(
-			"trainer_challenge_requested",
-			_on_trainer_challenge_requested
-		)
-	if world_map.has_signal("trainer_dialogue_requested"):
-		world_map.connect(
-			"trainer_dialogue_requested",
-			_on_trainer_dialogue_requested
-		)
-	if world_map.has_signal("trainer_battle_requested"):
-		world_map.connect(
-			"trainer_battle_requested",
-			_on_trainer_battle_requested
-		)
-	if world_map.has_signal("trainer_challenge_cancelled"):
-		world_map.connect(
-			"trainer_challenge_cancelled",
-			_on_trainer_challenge_cancelled
-		)
-	if world_map.has_signal("npc_interaction_started"):
-		world_map.connect(
-			"npc_interaction_started",
-			_on_npc_interaction_started
-		)
-	if world_map.has_signal("npc_interaction_finished"):
-		world_map.connect(
-			"npc_interaction_finished",
-			_on_npc_interaction_finished
-		)
-	if world_map.has_signal("npc_florins_gift_requested"):
-		world_map.connect(
-			"npc_florins_gift_requested",
-			_on_npc_florins_gift_requested
-		)
+	_connect_world_map_signals()
+	_map_cache[get_current_map_id()] = world_map
 	if world_map.has_method("get_spawn_position"):
 		player.global_position = world_map.call("get_spawn_position")
 	grimoire.setup(astral_roster)
@@ -113,6 +64,12 @@ func _ready() -> void:
 		player_profile,
 		world_map
 	)
+	if not save_manager.map_change_requested.is_connected(
+		_on_saved_map_change_requested
+	):
+		save_manager.map_change_requested.connect(
+			_on_saved_map_change_requested
+		)
 	game_ui.setup(
 		inventory,
 		astral_roster,
@@ -120,6 +77,180 @@ func _ready() -> void:
 		player_profile,
 		save_manager
 	)
+	if DisplayServer.get_name() != "headless":
+		call_deferred("_warm_up_battle_models")
+
+
+func _exit_tree() -> void:
+	for cached_map: Node3D in _map_cache.values():
+		if cached_map != null and not cached_map.is_inside_tree():
+			cached_map.free()
+	_map_cache.clear()
+
+
+func get_current_map_id() -> StringName:
+	if world_map != null and world_map.has_method("get_map_id"):
+		return world_map.call("get_map_id") as StringName
+	return &"verdant_forest"
+
+
+func _connect_world_map_signals() -> void:
+	_connect_world_map_signal(
+		&"map_interactable_interacted",
+		_on_map_interactable_interacted
+	)
+	_connect_world_map_signal(
+		&"wild_encounter_requested",
+		_on_wild_encounter_requested
+	)
+	_connect_world_map_signal(
+		&"trainer_challenge_requested",
+		_on_trainer_challenge_requested
+	)
+	_connect_world_map_signal(
+		&"trainer_dialogue_requested",
+		_on_trainer_dialogue_requested
+	)
+	_connect_world_map_signal(
+		&"trainer_battle_requested",
+		_on_trainer_battle_requested
+	)
+	_connect_world_map_signal(
+		&"trainer_challenge_cancelled",
+		_on_trainer_challenge_cancelled
+	)
+	_connect_world_map_signal(
+		&"npc_interaction_started",
+		_on_npc_interaction_started
+	)
+	_connect_world_map_signal(
+		&"npc_interaction_finished",
+		_on_npc_interaction_finished
+	)
+	_connect_world_map_signal(
+		&"npc_florins_gift_requested",
+		_on_npc_florins_gift_requested
+	)
+	_connect_world_map_signal(
+		&"map_transition_requested",
+		_on_map_transition_requested
+	)
+
+
+func _connect_world_map_signal(
+	signal_name: StringName,
+	callback: Callable
+) -> void:
+	if (
+		world_map != null
+		and world_map.has_signal(signal_name)
+		and not world_map.is_connected(signal_name, callback)
+	):
+		world_map.connect(signal_name, callback)
+
+
+func _on_map_transition_requested(
+	destination_map_id: StringName,
+	destination_spawn_id: StringName,
+	actor: CharacterBody3D
+) -> void:
+	if (
+		actor != player
+		or _map_transitioning
+		or _battle_transitioning
+		or _active_battle != null
+		or _active_trainer != null
+		or _active_npc != null
+	):
+		return
+	var normalized_map_id := _normalize_map_id(destination_map_id)
+	if not MAP_SCENES.has(normalized_map_id):
+		game_ui.show_notification("La destinazione del portale non è disponibile.")
+		return
+	_map_transitioning = true
+	_set_map_transition_movement_locked(true)
+	call_deferred(
+		"_perform_map_transition",
+		normalized_map_id,
+		destination_spawn_id
+	)
+
+
+func _perform_map_transition(
+	destination_map_id: StringName,
+	destination_spawn_id: StringName
+) -> void:
+	game_ui.set_pause_lock(MAP_TRANSITION_PAUSE_LOCK, true)
+	await game_ui.fade_to_black(battle_fade_duration)
+	var map_changed := _replace_world_map(
+		destination_map_id,
+		destination_spawn_id,
+		true
+	)
+	await game_ui.fade_from_black(battle_fade_duration)
+	game_ui.set_pause_lock(MAP_TRANSITION_PAUSE_LOCK, false)
+	_set_map_transition_movement_locked(false)
+	_map_transitioning = false
+	if map_changed:
+		var location_name := String(destination_map_id)
+		if world_map.has_method("get_location_name"):
+			location_name = String(world_map.call("get_location_name"))
+		game_ui.show_notification("Sei arrivato: %s." % location_name)
+	else:
+		game_ui.show_notification("Il portale non ha potuto completare il viaggio.")
+
+
+func _replace_world_map(
+	destination_map_id: StringName,
+	destination_spawn_id: StringName = &"default",
+	place_player_at_spawn: bool = true
+) -> bool:
+	var normalized_map_id := _normalize_map_id(destination_map_id)
+	var packed_map: PackedScene = MAP_SCENES.get(normalized_map_id)
+	if packed_map == null:
+		return false
+	if get_current_map_id() == normalized_map_id:
+		if place_player_at_spawn:
+			_place_player_at_map_spawn(destination_spawn_id)
+		return true
+	var new_world_map: Node3D = _map_cache.get(normalized_map_id)
+	if new_world_map == null:
+		new_world_map = packed_map.instantiate() as Node3D
+	if new_world_map == null:
+		return false
+	var old_world_map := world_map
+	var map_child_index := old_world_map.get_index() if old_world_map != null else 0
+	if old_world_map != null:
+		_map_cache[get_current_map_id()] = old_world_map
+		remove_child(old_world_map)
+	new_world_map.name = "WorldMap"
+	add_child(new_world_map)
+	move_child(new_world_map, mini(map_child_index, get_child_count() - 1))
+	world_map = new_world_map
+	_map_cache[normalized_map_id] = world_map
+	_connect_world_map_signals()
+	if save_manager != null:
+		save_manager.set_world_map(world_map)
+	if place_player_at_spawn:
+		_place_player_at_map_spawn(destination_spawn_id)
+	return true
+
+
+func _place_player_at_map_spawn(spawn_id: StringName) -> void:
+	if world_map == null or not world_map.has_method("get_spawn_position"):
+		return
+	player.global_position = world_map.call("get_spawn_position", spawn_id)
+	player.velocity = Vector3.ZERO
+
+
+func _on_saved_map_change_requested(map_id: StringName) -> void:
+	_replace_world_map(_normalize_map_id(map_id), &"default", false)
+
+
+func _normalize_map_id(map_id: StringName) -> StringName:
+	if map_id == &"world_map" or map_id == &"verdant_valley":
+		return &"verdant_forest"
+	return map_id
 
 
 func _on_wild_encounter_requested(
@@ -129,6 +260,7 @@ func _on_wild_encounter_requested(
 	if (
 		_active_battle != null
 		or _battle_transitioning
+		or _map_transitioning
 		or _active_npc != null
 	):
 		return
@@ -137,8 +269,16 @@ func _on_wild_encounter_requested(
 
 
 func _start_wild_battle() -> void:
+	var wild_definition := get_random_wild_astral_definition()
+	if wild_definition == null:
+		push_error("Nessun Astral selvatico configurato per l'incontro.")
+		_battle_transitioning = false
+		return
+	var battle_definitions := _get_battle_model_definitions(wild_definition)
+	_request_astral_models(battle_definitions)
 	game_ui.set_pause_lock(BATTLE_PAUSE_LOCK, true)
 	await game_ui.fade_to_black(battle_fade_duration)
+	await _wait_for_astral_models(battle_definitions)
 
 	var battle := BATTLE_SCENE.instantiate() as BattleController
 	if battle == null:
@@ -151,15 +291,6 @@ func _start_wild_battle() -> void:
 	_active_battle = battle
 	battle_host.add_child(battle)
 	battle.battle_finished.connect(_on_battle_finished)
-	var wild_definition := get_random_wild_astral_definition()
-	if wild_definition == null:
-		push_error("Nessun Astral selvatico configurato per l'incontro.")
-		battle.queue_free()
-		_active_battle = null
-		await game_ui.fade_from_black(battle_fade_duration)
-		game_ui.set_pause_lock(BATTLE_PAUSE_LOCK, false)
-		_battle_transitioning = false
-		return
 	grimoire.register_seen(wild_definition)
 	battle.setup(
 		inventory,
@@ -183,6 +314,7 @@ func _on_trainer_challenge_requested(
 		or trainer.defeated
 		or _active_battle != null
 		or _battle_transitioning
+		or _map_transitioning
 		or _active_trainer != null
 		or _active_npc != null
 	):
@@ -211,6 +343,7 @@ func _on_trainer_battle_requested(trainer: TrainerNpc) -> void:
 		or trainer.astral_definition == null
 		or _active_battle != null
 		or _battle_transitioning
+		or _map_transitioning
 	):
 		return
 	trainer.mark_battle_started()
@@ -237,6 +370,7 @@ func _on_npc_interaction_started(
 		or _active_trainer != null
 		or _active_battle != null
 		or _battle_transitioning
+		or _map_transitioning
 	):
 		if npc != null:
 			npc.cancel_interaction()
@@ -283,6 +417,24 @@ func _on_npc_florins_gift_requested(
 			],
 			true
 		)
+	for item_index: int in npc.gift_item_ids.size():
+		var item_id := npc.gift_item_ids[item_index]
+		var requested_amount := (
+			npc.gift_item_amounts[item_index]
+			if item_index < npc.gift_item_amounts.size()
+			else 1
+		)
+		var added_amount := inventory.add_item(item_id, maxi(requested_amount, 0))
+		var item := inventory.get_item_definition(item_id)
+		if item != null and added_amount > 0:
+			game_ui.show_notification(
+				"%s ti ha regalato %d %s." % [
+					npc.display_name,
+					added_amount,
+					item.display_name,
+				],
+				true
+			)
 
 
 func _start_trainer_battle() -> void:
@@ -291,8 +443,13 @@ func _start_trainer_battle() -> void:
 		_cancel_active_trainer_challenge()
 		_battle_transitioning = false
 		return
+	var battle_definitions := _get_battle_model_definitions(
+		trainer.astral_definition
+	)
+	_request_astral_models(battle_definitions)
 	game_ui.set_pause_lock(BATTLE_PAUSE_LOCK, true)
 	await game_ui.fade_to_black(battle_fade_duration)
+	await _wait_for_astral_models(battle_definitions)
 
 	var battle := BATTLE_SCENE.instantiate() as BattleController
 	if battle == null:
@@ -321,16 +478,65 @@ func _start_trainer_battle() -> void:
 
 
 func get_wild_astral_pool() -> Array[AstralDefinition]:
-	var pool_copy: Array[AstralDefinition] = []
-	pool_copy.assign(WILD_ASTRAL_POOL)
-	return pool_copy
+	return AstralCatalog.load_wild_base_definitions()
+
+
+func _warm_up_battle_models() -> void:
+	var definitions := get_wild_astral_pool()
+	for party_index: int in astral_roster.get_astral_count():
+		var astral := astral_roster.get_astral(party_index)
+		if (
+			astral != null
+			and astral.definition != null
+			and not definitions.has(astral.definition)
+		):
+			definitions.append(astral.definition)
+	_request_astral_models(definitions)
+	await _wait_for_astral_models(definitions)
+
+
+func _get_battle_model_definitions(
+	opponent: AstralDefinition
+) -> Array[AstralDefinition]:
+	var definitions: Array[AstralDefinition] = []
+	var active_astral := astral_roster.get_active_astral()
+	if active_astral != null and active_astral.definition != null:
+		definitions.append(active_astral.definition)
+	if opponent != null and not definitions.has(opponent):
+		definitions.append(opponent)
+	return definitions
+
+
+func _request_astral_models(definitions: Array[AstralDefinition]) -> void:
+	for definition: AstralDefinition in definitions:
+		if definition != null:
+			definition.request_model_scene_load()
+
+
+func _wait_for_astral_models(
+	definitions: Array[AstralDefinition]
+) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	while true:
+		var loading := false
+		for definition: AstralDefinition in definitions:
+			if definition == null:
+				continue
+			var status := definition.poll_model_scene_load()
+			if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+				loading = true
+		if not loading:
+			return
+		await get_tree().process_frame
 
 
 func get_random_wild_astral_definition() -> AstralDefinition:
-	if WILD_ASTRAL_POOL.is_empty():
+	var pool := get_wild_astral_pool()
+	if pool.is_empty():
 		return null
-	return WILD_ASTRAL_POOL[
-		_encounter_random.randi_range(0, WILD_ASTRAL_POOL.size() - 1)
+	return pool[
+		_encounter_random.randi_range(0, pool.size() - 1)
 	]
 
 
@@ -343,7 +549,7 @@ func _get_wild_astral_level() -> int:
 	var reference_level := leader.level if leader != null else 1
 	var minimum_level := maxi(
 		reference_level + wild_level_minimum_offset,
-		1
+		5
 	)
 	var maximum_level := maxi(
 		reference_level + wild_level_maximum_offset,
@@ -438,6 +644,11 @@ func _set_npc_dialogue_movement_locked(active: bool) -> void:
 		player.call("set_movement_lock", NPC_DIALOGUE_MOVEMENT_LOCK, active)
 
 
+func _set_map_transition_movement_locked(active: bool) -> void:
+	if player.has_method("set_movement_lock"):
+		player.call("set_movement_lock", MAP_TRANSITION_MOVEMENT_LOCK, active)
+
+
 func _show_battle_result(
 	outcome: StringName,
 	captured_astral: AstralInstance
@@ -460,8 +671,10 @@ func _show_battle_result(
 
 func _on_map_interactable_interacted(
 	interactable: InteractableArea3D,
-	_interactor: Node3D
+	interactor: Node3D
 ) -> void:
+	if interactor != player or _map_transitioning:
+		return
 	var item_id: StringName = DROPS_BY_CATEGORY.get(interactable.category, &"")
 	if item_id.is_empty():
 		return

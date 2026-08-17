@@ -8,6 +8,7 @@ extends CanvasLayer
 @onready var save_slots_screen: SaveSlotsScreen = $SaveSlotsScreen
 @onready var inventory_screen: InventoryScreen = $InventoryScreen
 @onready var squad_screen: SquadScreen = $SquadScreen
+@onready var astral_box_screen: AstralBoxScreen = $AstralBoxScreen
 @onready var grimoire_screen: GrimoireScreen = $GrimoireScreen
 @onready var player_profile_screen: PlayerProfileScreen = $PlayerProfileScreen
 @onready var notification_toast: NotificationToast = $NotificationToast
@@ -34,9 +35,13 @@ func _ready() -> void:
 	save_slots_screen.back_requested.connect(_return_to_pause_menu)
 	inventory_screen.notification_requested.connect(show_notification)
 	squad_screen.close_requested.connect(_on_squad_close_requested)
+	squad_screen.notification_requested.connect(show_notification)
+	astral_box_screen.close_requested.connect(_on_astral_box_close_requested)
+	astral_box_screen.notification_requested.connect(show_notification)
 	grimoire_screen.close_requested.connect(_on_grimoire_close_requested)
 	player_profile_screen.close_requested.connect(_on_player_profile_close_requested)
 	squad_screen.setup(_find_astral_roster())
+	astral_box_screen.setup(_find_astral_roster())
 	grimoire_screen.setup(_find_grimoire())
 	player_profile_screen.setup(_find_player_profile())
 	set_save_manager(_find_save_manager())
@@ -53,7 +58,8 @@ func setup(
 	var resolved_roster: AstralRoster = roster
 	if resolved_roster == null:
 		resolved_roster = _find_astral_roster()
-	squad_screen.setup(resolved_roster)
+	squad_screen.setup(resolved_roster, inventory)
+	astral_box_screen.setup(resolved_roster, inventory)
 	grimoire_screen.setup(grimoire if grimoire != null else _find_grimoire())
 	player_profile_screen.setup(
 		profile if profile != null else _find_player_profile()
@@ -104,6 +110,7 @@ func set_pause_lock(lock_id: StringName, active: bool) -> void:
 		save_slots_screen.close()
 		inventory_screen.close()
 		squad_screen.close()
+		astral_box_screen.close()
 		grimoire_screen.close()
 		player_profile_screen.close()
 	else:
@@ -156,6 +163,7 @@ func _input(event: InputEvent) -> void:
 			event.is_action_pressed("toggle_menu")
 			or event.is_action_pressed("toggle_inventory")
 			or event.is_action_pressed("toggle_squad")
+			or event.is_action_pressed("toggle_astral_box")
 			or event.is_action_pressed("toggle_grimoire")
 			or event.is_action_pressed("toggle_player_profile")
 		):
@@ -183,6 +191,12 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			return
 		_toggle_squad()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("toggle_astral_box"):
+		if _is_pause_subscreen_visible():
+			get_viewport().set_input_as_handled()
+			return
+		_toggle_astral_box()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("toggle_grimoire"):
 		if _is_pause_subscreen_visible():
@@ -225,6 +239,15 @@ func _toggle_squad() -> void:
 	_sync_pause_state()
 
 
+func _toggle_astral_box() -> void:
+	if astral_box_screen.visible:
+		astral_box_screen.close()
+	else:
+		_close_modal_screens(astral_box_screen)
+		astral_box_screen.open()
+	_sync_pause_state()
+
+
 func _toggle_grimoire() -> void:
 	if grimoire_screen.visible:
 		grimoire_screen.close()
@@ -247,6 +270,13 @@ func _on_squad_close_requested() -> void:
 	if not squad_screen.visible:
 		return
 	squad_screen.close()
+	_sync_pause_state()
+
+
+func _on_astral_box_close_requested() -> void:
+	if not astral_box_screen.visible:
+		return
+	astral_box_screen.close()
 	_sync_pause_state()
 
 
@@ -372,6 +402,7 @@ func _close_modal_screens(exception_screen: Control = null) -> void:
 		save_slots_screen,
 		inventory_screen,
 		squad_screen,
+		astral_box_screen,
 		grimoire_screen,
 		player_profile_screen,
 	]
@@ -394,6 +425,7 @@ func _sync_pause_state() -> void:
 		or save_slots_screen.visible
 		or inventory_screen.visible
 		or squad_screen.visible
+		or astral_box_screen.visible
 		or grimoire_screen.visible
 		or player_profile_screen.visible
 	)

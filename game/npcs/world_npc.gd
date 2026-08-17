@@ -18,6 +18,8 @@ signal florins_gift_requested(
 @export_range(0.5, 10.0, 0.1) var dialogue_duration: float = 3.0
 @export_group("Ricompensa")
 @export_range(0, 999999, 1) var florins_gift: int = 0
+@export var gift_item_ids: Array[StringName] = []
+@export var gift_item_amounts: Array[int] = []
 
 @onready var name_label: Label3D = $NameLabel
 @onready var body_mesh: MeshInstance3D = $Visual/Body

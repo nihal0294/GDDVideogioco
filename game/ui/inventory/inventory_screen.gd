@@ -117,7 +117,16 @@ func _update_action_buttons() -> void:
 		else null
 	) as ItemDefinition
 	discard_button.disabled = item == null
-	consume_button.disabled = item == null or not item.consumable
+	consume_button.disabled = (
+		item == null
+		or not item.consumable
+		or item.requires_astral_target
+	)
+	consume_button.text = (
+		"Usa da Squadra/Box"
+		if item != null and item.requires_astral_target
+		else "Consuma"
+	)
 	item_description.text = (
 		item.description
 		if item != null

@@ -1,7 +1,7 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=13 format=3 uid="uid://qxhwbnemo7p4"]
 
-[ext_resource type="Script" path="res://game/battle/battle_controller.gd" id="1_controller"]
-[ext_resource type="Script" path="res://game/astrals/astral_model_3d.gd" id="2_model"]
+[ext_resource type="Script" uid="uid://di12e2jfwj45p" path="res://game/battle/battle_controller.gd" id="1_controller"]
+[ext_resource type="Script" uid="uid://upox8ijwxaaa" path="res://game/astrals/astral_model_3d.gd" id="2_model"]
 
 [sub_resource type="Environment" id="Environment_arena"]
 background_mode = 1
@@ -63,62 +63,59 @@ corner_radius_bottom_right = 9
 corner_radius_bottom_left = 9
 
 [sub_resource type="StyleBoxFlat" id="Style_commands"]
+content_margin_left = 14.0
+content_margin_top = 12.0
+content_margin_right = 14.0
+content_margin_bottom = 12.0
 bg_color = Color(0.035, 0.065, 0.095, 0.96)
 corner_radius_top_left = 9
 corner_radius_top_right = 9
 corner_radius_bottom_right = 9
 corner_radius_bottom_left = 9
-content_margin_left = 14.0
-content_margin_top = 12.0
-content_margin_right = 14.0
-content_margin_bottom = 12.0
 
 [node name="Battle" type="Node"]
 process_mode = 3
 script = ExtResource("1_controller")
 
 [node name="Arena" type="Node3D" parent="."]
-position = Vector3(0, 400, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 400, 0)
 
 [node name="BattleLight" type="DirectionalLight3D" parent="Arena"]
-rotation = Vector3(-0.82, -0.55, 0.12)
+transform = Transform3D(0.892143, 0.27735478, -0.35658833, 0.08167021, 0.6773151, 0.7311458, 0.4443094, -0.6814093, 0.5816103, 0, 0, 0)
 light_color = Color(1, 0.91, 0.78, 1)
 light_energy = 1.35
-shadow_enabled = true
 light_cull_mask = 2
+shadow_enabled = true
 
 [node name="BattleCamera" type="Camera3D" parent="Arena"]
 unique_name_in_owner = true
-position = Vector3(0, 5.8, 10.5)
-rotation = Vector3(-0.43, 0, 0)
+transform = Transform3D(0.99875027, -0.017137747, 0.046949066, 0, 0.9393727, 0.3428978, -0.04997917, -0.34246927, 0.93819875, 0.5, 4.2, 7.5)
 cull_mask = 2
 environment = SubResource("Environment_arena")
-fov = 48.0
+fov = 55.0
 
 [node name="Ground" type="MeshInstance3D" parent="Arena"]
 layers = 2
 mesh = SubResource("Mesh_ground")
 
 [node name="PlayerPlatform" type="MeshInstance3D" parent="Arena"]
-position = Vector3(-3.1, 0.14, 1.1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.1, 0.14, 1.1)
 layers = 2
 mesh = SubResource("Mesh_player_platform")
 
 [node name="WildPlatform" type="MeshInstance3D" parent="Arena"]
-position = Vector3(3.1, 0.14, -0.6)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.1, 0.14, -0.6)
 layers = 2
 mesh = SubResource("Mesh_wild_platform")
 
 [node name="PlayerMonster" type="Node3D" parent="Arena"]
 unique_name_in_owner = true
-position = Vector3(-3.1, 0.28, 1.1)
-rotation = Vector3(0, -1.570796, 0)
+transform = Transform3D(-0.07912087, 0, 0.99686503, 0, 1, 0, -0.99686503, 0, -0.07912087, -3.1, 0.28, 1.1)
 script = ExtResource("2_model")
 
 [node name="WildMonster" type="Node3D" parent="Arena"]
 unique_name_in_owner = true
-position = Vector3(3.1, 0.28, -0.6)
-rotation = Vector3(0, 1.570796, 0)
+transform = Transform3D(-0.07912087, 0, -0.99686503, 0, 1, 0, 0.99686503, 0, -0.07912087, 3.1, 0.28, -0.6)
 script = ExtResource("2_model")
 
 [node name="BattleUI" type="CanvasLayer" parent="."]
@@ -236,8 +233,8 @@ show_percentage = false
 [node name="BottomMargin" type="MarginContainer" parent="BattleUI/BattleScreen"]
 layout_mode = 1
 anchors_preset = 12
-anchor_right = 1.0
 anchor_top = 1.0
+anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 32.0
 offset_top = -382.0
@@ -342,9 +339,9 @@ horizontal_alignment = 1
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
-columns = 2
 theme_override_constants/h_separation = 8
 theme_override_constants/v_separation = 6
+columns = 2
 
 [node name="MoveBackButton" type="Button" parent="BattleUI/BattleScreen/BottomMargin/BottomLayout/MovePanel/MoveLayout"]
 unique_name_in_owner = true

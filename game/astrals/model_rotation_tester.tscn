@@ -1,0 +1,25 @@
+[gd_scene load_steps=4 format=3 uid="uid://6xw0ersxmbhk"]
+
+[ext_resource type="Script" uid="uid://crq5c2l6snf0w" path="res://game/astrals/model_rotation_tester.gd" id="1_tester"]
+
+[sub_resource type="StandardMaterial3D" id="Material_ground"]
+albedo_color = Color(0.3, 0.3, 0.3, 1)
+
+[sub_resource type="PlaneMesh" id="Mesh_ground"]
+material = SubResource("Material_ground")
+size = Vector2(20, 20)
+
+[node name="ModelRotationTester" type="Node3D"]
+script = ExtResource("1_tester")
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.746531, 0)
+mesh = SubResource("Mesh_ground")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.9800666, 0.19866933, 0, -0.19866933, 0.9800666, 0, 2, 5)
+
+[node name="Light" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.9284155, 0.16271463, -0.334019, 0.13841425, 0.68281895, 0.7173561, 0.34479883, -0.7122375, 0.61141765, 0, 0, 0)
+light_energy = 1.5
+shadow_enabled = true

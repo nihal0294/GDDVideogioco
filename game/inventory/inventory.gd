@@ -16,6 +16,7 @@ const ITEM_DEFINITION_PATHS: Array[String] = [
 	"res://data/items/pietrafuoco.tres",
 	"res://data/items/pietragelo.tres",
 	"res://data/items/pietranatura.tres",
+	"res://data/items/runa_base.tres",
 ]
 
 var _definitions: Dictionary[StringName, ItemDefinition] = {}
@@ -106,6 +107,11 @@ func discard_item(item_id: StringName, amount: int = 1) -> int:
 	if removed_quantity > 0:
 		item_discarded.emit(definition, removed_quantity)
 	return removed_quantity
+
+
+## Rimuove oggetti per sistemi che ne spendono la quantita senza usarli dal menu.
+func spend_item(item_id: StringName, amount: int = 1) -> int:
+	return _remove_item(item_id, amount)
 
 
 func get_quantity(item_id: StringName) -> int:

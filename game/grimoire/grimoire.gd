@@ -27,6 +27,8 @@ func setup(roster: AstralRoster) -> void:
 	if _roster != null:
 		if not _roster.astral_captured.is_connected(_on_astral_captured):
 			_roster.astral_captured.connect(_on_astral_captured)
+		if not _roster.astral_received.is_connected(_on_astral_captured):
+			_roster.astral_received.connect(_on_astral_captured)
 		if not _roster.astral_evolved.is_connected(_on_astral_evolved):
 			_roster.astral_evolved.connect(_on_astral_evolved)
 		for astral: AstralInstance in _roster.get_all_astrals():
@@ -163,6 +165,12 @@ func _disconnect_roster() -> void:
 		and _roster.astral_captured.is_connected(_on_astral_captured)
 	):
 		_roster.astral_captured.disconnect(_on_astral_captured)
+	if (
+		_roster != null
+		and is_instance_valid(_roster)
+		and _roster.astral_received.is_connected(_on_astral_captured)
+	):
+		_roster.astral_received.disconnect(_on_astral_captured)
 	if (
 		_roster != null
 		and is_instance_valid(_roster)

@@ -14,7 +14,11 @@ extends CanvasLayer
 @onready var notification_toast: NotificationToast = $NotificationToast
 @onready var level_up_summary: LevelUpSummary = $LevelUpSummary
 @onready var move_learn_prompt: MoveLearnPrompt = $MoveLearnPrompt
+@onready var shop_screen: ShopScreen = $ShopScreen
+@onready var astral_exchange_screen: AstralExchangeScreen = $AstralExchangeScreen
+@onready var coin_flip_screen: CoinFlipScreen = $CoinFlipScreen
 @onready var transition_fade: ColorRect = $TransitionFade
+@onready var loading_label: Label = $TransitionFade/LoadingLabel
 
 var _pause_locks: Dictionary[StringName, bool] = {}
 var _fade_tween: Tween = null
@@ -50,6 +54,16 @@ func _ready() -> void:
 	move_learn_prompt.learning_declined.connect(_on_move_learning_declined)
 	move_learn_prompt.request_started.connect(_sync_pause_state)
 	move_learn_prompt.request_finished.connect(_sync_pause_state)
+	shop_screen.close_requested.connect(_on_facility_screen_close_requested.bind(shop_screen))
+	shop_screen.notification_requested.connect(show_notification)
+	astral_exchange_screen.close_requested.connect(
+		_on_facility_screen_close_requested.bind(astral_exchange_screen)
+	)
+	astral_exchange_screen.notification_requested.connect(show_notification)
+	coin_flip_screen.close_requested.connect(
+		_on_facility_screen_close_requested.bind(coin_flip_screen)
+	)
+	coin_flip_screen.notification_requested.connect(show_notification)
 	squad_screen.setup(_find_astral_roster())
 	_set_level_up_roster(_find_astral_roster())
 	astral_box_screen.setup(_find_astral_roster())
@@ -76,6 +90,10 @@ func setup(
 	player_profile_screen.setup(
 		profile if profile != null else _find_player_profile()
 	)
+	var resolved_profile := profile if profile != null else _find_player_profile()
+	shop_screen.setup(inventory, resolved_profile)
+	astral_exchange_screen.setup(resolved_roster, resolved_profile)
+	coin_flip_screen.setup(resolved_profile)
 	set_save_manager(save_manager if save_manager != null else _find_save_manager())
 
 
@@ -125,6 +143,9 @@ func set_pause_lock(lock_id: StringName, active: bool) -> void:
 		astral_box_screen.close()
 		grimoire_screen.close()
 		player_profile_screen.close()
+		shop_screen.close()
+		astral_exchange_screen.close()
+		coin_flip_screen.close()
 	else:
 		_pause_locks.erase(lock_id)
 	_sync_pause_state()
@@ -132,6 +153,29 @@ func set_pause_lock(lock_id: StringName, active: bool) -> void:
 
 func has_pause_lock(lock_id: StringName) -> bool:
 	return _pause_locks.has(lock_id)
+
+
+func open_shop() -> void:
+	_open_facility_screen(shop_screen)
+
+
+func open_astral_exchange() -> void:
+	_open_facility_screen(astral_exchange_screen)
+
+
+func open_coin_flip() -> void:
+	_open_facility_screen(coin_flip_screen)
+
+
+func open_astral_box() -> void:
+	_close_modal_screens(astral_box_screen)
+	astral_box_screen.open()
+	_sync_pause_state()
+
+
+func set_loading_visible(visible_state: bool, message: String = "Caricamento...") -> void:
+	loading_label.text = message
+	loading_label.visible = visible_state
 
 
 func fade_to_black(duration: float = 0.35) -> void:
@@ -253,6 +297,23 @@ func _toggle_astral_box() -> void:
 	else:
 		_close_modal_screens(astral_box_screen)
 		astral_box_screen.open()
+	_sync_pause_state()
+
+
+func _open_facility_screen(screen: Control) -> void:
+	if screen == null or not _pause_locks.is_empty():
+		return
+	_close_modal_screens(screen)
+	if screen.has_method("open"):
+		screen.call("open")
+	else:
+		screen.show()
+	_sync_pause_state()
+
+
+func _on_facility_screen_close_requested(screen: Control) -> void:
+	if screen != null and screen.has_method("close"):
+		screen.call("close")
 	_sync_pause_state()
 
 
@@ -413,6 +474,9 @@ func _close_modal_screens(exception_screen: Control = null) -> void:
 		astral_box_screen,
 		grimoire_screen,
 		player_profile_screen,
+		shop_screen,
+		astral_exchange_screen,
+		coin_flip_screen,
 	]
 	for screen: Control in screens:
 		if screen == exception_screen:
@@ -436,6 +500,9 @@ func _sync_pause_state() -> void:
 		or astral_box_screen.visible
 		or grimoire_screen.visible
 		or player_profile_screen.visible
+		or shop_screen.visible
+		or astral_exchange_screen.visible
+		or coin_flip_screen.visible
 		or move_learn_prompt.visible
 	)
 

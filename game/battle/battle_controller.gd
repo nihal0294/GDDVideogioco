@@ -228,6 +228,9 @@ func choose_capture() -> void:
 	if _trainer_battle:
 		message_label.text = "Non puoi catturare l'Astral di un allenatore."
 		return
+	if _inventory == null or _inventory.get_quantity(&"runa_base") <= 0:
+		message_label.text = "Ti serve una Runa Base per tentare il soulbind."
+		return
 	_resolve_capture()
 
 
@@ -524,6 +527,10 @@ func _get_next_wild_move_index() -> int:
 
 
 func _resolve_capture() -> void:
+	if _inventory == null or _inventory.spend_item(&"runa_base", 1) != 1:
+		message_label.text = "Non hai una Runa Base disponibile."
+		_show_commands()
+		return
 	_state = BattleState.RESOLVING
 	_set_command_buttons_disabled(true)
 	message_label.text = "La runa del soulbind avvolge %s..." % (
@@ -862,8 +869,17 @@ func _set_command_buttons_disabled(disabled: bool) -> void:
 	fight_button.disabled = disabled
 	items_button.disabled = disabled
 	switch_button.disabled = disabled
-	capture_button.disabled = disabled or _trainer_battle
+	var has_capture_rune := (
+		_inventory != null and _inventory.get_quantity(&"runa_base") > 0
+	)
+	capture_button.disabled = disabled or _trainer_battle or not has_capture_rune
 	flee_button.disabled = disabled or _trainer_battle
+	if not _trainer_battle:
+		capture_button.tooltip_text = (
+			""
+			if has_capture_rune
+			else "Serve una Runa Base per tentare il soulbind."
+		)
 
 
 func _wait_for_action() -> void:

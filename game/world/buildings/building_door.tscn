@@ -1,0 +1,46 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://game/world/buildings/building_door.gd" id="1"]
+[ext_resource type="Script" path="res://game/interaction/interactable_area_3d.gd" id="2"]
+
+[sub_resource type="StandardMaterial3D" id="mat"]
+albedo_color = Color(0.28, 0.12, 0.055, 1)
+roughness = 0.72
+
+[sub_resource type="BoxMesh" id="mesh"]
+material = SubResource("mat")
+size = Vector3(1.8, 2.8, 0.22)
+
+[sub_resource type="BoxShape3D" id="solid"]
+size = Vector3(1.8, 2.8, 0.22)
+
+[sub_resource type="SphereShape3D" id="trigger"]
+radius = 1.8
+
+[node name="BuildingDoor" type="Node3D"]
+script = ExtResource("1")
+
+[node name="Door" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.4, 0)
+mesh = SubResource("mesh")
+
+[node name="SolidBody" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SolidBody"]
+position = Vector3(0, 1.4, 0)
+shape = SubResource("solid")
+
+[node name="InteractionArea" type="Area3D" parent="."]
+position = Vector3(0, 1.3, 0.7)
+collision_layer = 4
+collision_mask = 0
+monitoring = false
+script = ExtResource("2")
+interaction_radius = 1.8
+max_generated_items = 0
+item_generation_probability = 0.0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractionArea"]
+shape = SubResource("trigger")

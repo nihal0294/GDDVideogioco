@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://game/ui/game_ui.gd" id="1_game_ui"]
 [ext_resource type="PackedScene" path="res://game/ui/menu/pause_menu.tscn" id="2_pause_menu"]
@@ -14,6 +14,9 @@
 [ext_resource type="PackedScene" path="res://game/ui/box/astral_box_screen.tscn" id="12_astral_box"]
 [ext_resource type="PackedScene" path="res://game/ui/level_up/level_up_summary.tscn" id="13_level_up"]
 [ext_resource type="PackedScene" path="res://game/ui/move_learning/move_learn_prompt.tscn" id="14_move_learn"]
+[ext_resource type="PackedScene" path="res://game/ui/shop/shop_screen.tscn" id="15_shop"]
+[ext_resource type="PackedScene" path="res://game/ui/exchange/astral_exchange_screen.tscn" id="16_exchange"]
+[ext_resource type="PackedScene" path="res://game/ui/gambling/coin_flip_screen.tscn" id="17_coin"]
 
 [node name="GameUI" type="CanvasLayer"]
 process_mode = 3
@@ -46,6 +49,12 @@ script = ExtResource("1_game_ui")
 
 [node name="MoveLearnPrompt" parent="." instance=ExtResource("14_move_learn")]
 
+[node name="ShopScreen" parent="." instance=ExtResource("15_shop")]
+
+[node name="AstralExchangeScreen" parent="." instance=ExtResource("16_exchange")]
+
+[node name="CoinFlipScreen" parent="." instance=ExtResource("17_coin")]
+
 [node name="TransitionFade" type="ColorRect" parent="."]
 visible = false
 z_index = 1000
@@ -57,3 +66,21 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 color = Color(0, 0, 0, 0)
+
+[node name="LoadingLabel" type="Label" parent="TransitionFade"]
+visible = false
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -64.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.82, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 20
+text = "Caricamento..."
+horizontal_alignment = 1
+vertical_alignment = 1

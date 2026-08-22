@@ -9,6 +9,9 @@ const MAP_SCENES: Dictionary[StringName, PackedScene] = {
 	&"large_island": preload(
 		"res://game/world/maps/large_island/large_island.tscn"
 	),
+	&"merchant_house": preload(
+		"res://game/world/maps/merchant_house/merchant_house.tscn"
+	),
 }
 const BATTLE_PAUSE_LOCK: StringName = &"battle"
 const TRAINER_MOVEMENT_LOCK: StringName = &"trainer_challenge"
@@ -135,6 +138,10 @@ func _connect_world_map_signals() -> void:
 		&"map_transition_requested",
 		_on_map_transition_requested
 	)
+	_connect_world_map_signal(
+		&"facility_action_requested",
+		_on_facility_action_requested
+	)
 
 
 func _connect_world_map_signal(
@@ -182,11 +189,15 @@ func _perform_map_transition(
 ) -> void:
 	game_ui.set_pause_lock(MAP_TRANSITION_PAUSE_LOCK, true)
 	await game_ui.fade_to_black(battle_fade_duration)
+	game_ui.set_loading_visible(true, "Caricamento ambiente...")
+	await get_tree().create_timer(0.2, true).timeout
 	var map_changed := _replace_world_map(
 		destination_map_id,
 		destination_spawn_id,
 		true
 	)
+	await get_tree().process_frame
+	game_ui.set_loading_visible(false)
 	await game_ui.fade_from_black(battle_fade_duration)
 	game_ui.set_pause_lock(MAP_TRANSITION_PAUSE_LOCK, false)
 	_set_map_transition_movement_locked(false)
@@ -198,6 +209,30 @@ func _perform_map_transition(
 		game_ui.show_notification("Sei arrivato: %s." % location_name)
 	else:
 		game_ui.show_notification("Il portale non ha potuto completare il viaggio.")
+
+
+func _on_facility_action_requested(
+	action_id: StringName,
+	actor: CharacterBody3D
+) -> void:
+	if actor != player or _map_transitioning or _active_battle != null:
+		return
+	match action_id:
+		&"merchant":
+			game_ui.open_shop()
+		&"astral_exchange":
+			game_ui.open_astral_exchange()
+		&"healer":
+			var healed := astral_roster.heal_party_to_full()
+			game_ui.show_notification(
+				"La squadra è già in piena forma."
+				if healed == 0
+				else "La guaritrice ha curato e rianimato tutta la squadra."
+			)
+		&"astral_box":
+			game_ui.open_astral_box()
+		&"coin_flip":
+			game_ui.open_coin_flip()
 
 
 func _replace_world_map(

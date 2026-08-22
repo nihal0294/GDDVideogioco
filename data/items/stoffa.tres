@@ -9,3 +9,4 @@ display_name = "Stoffa"
 description = "Un ritaglio resistente, utile per riparazioni e lavorazioni."
 category = &"object"
 max_quantity = 10
+buy_price = 50

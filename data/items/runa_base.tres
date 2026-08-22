@@ -4,10 +4,10 @@
 
 [resource]
 script = ExtResource("1_item")
-item_id = &"cocco"
-display_name = "Cocco"
-description = "Un frutto tropicale ricco d'acqua, ottimo per uno spuntino."
+item_id = &"runa_base"
+display_name = "Runa Base"
+description = "Una runa semplice per il soulbind. Viene consumata a ogni tentativo di cattura."
 category = &"object"
-max_quantity = 10
-buy_price = 40
-consumable = true
+max_quantity = 99
+buy_price = 100
+consumable = false

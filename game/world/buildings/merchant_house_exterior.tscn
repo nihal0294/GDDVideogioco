@@ -1,0 +1,121 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="PackedScene" path="res://game/world/buildings/building_door.tscn" id="1"]
+
+[sub_resource type="StandardMaterial3D" id="wall_mat"]
+albedo_color = Color(0.74, 0.58, 0.37, 1)
+roughness = 0.86
+
+[sub_resource type="StandardMaterial3D" id="roof_mat"]
+albedo_color = Color(0.35, 0.09, 0.07, 1)
+roughness = 0.8
+
+[sub_resource type="StandardMaterial3D" id="base_mat"]
+albedo_color = Color(0.27, 0.29, 0.26, 1)
+roughness = 0.95
+
+[sub_resource type="BoxMesh" id="wall_mesh"]
+material = SubResource("wall_mat")
+size = Vector3(1, 1, 1)
+
+[sub_resource type="BoxMesh" id="roof_mesh"]
+material = SubResource("roof_mat")
+size = Vector3(1, 1, 1)
+
+[sub_resource type="BoxMesh" id="base_mesh"]
+material = SubResource("base_mat")
+size = Vector3(1, 1, 1)
+
+[sub_resource type="BoxShape3D" id="wall_shape"]
+size = Vector3(1, 1, 1)
+
+[node name="MerchantHouseExterior" type="Node3D"]
+
+[node name="Foundation" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.3, 0)
+scale = Vector3(8.5, 0.6, 7.5)
+mesh = SubResource("base_mesh")
+
+[node name="BackWall" type="MeshInstance3D" parent="."]
+position = Vector3(0, 2.6, -3.5)
+scale = Vector3(8, 4.6, 0.3)
+mesh = SubResource("wall_mesh")
+
+[node name="LeftWall" type="MeshInstance3D" parent="."]
+position = Vector3(-4, 2.6, 0)
+scale = Vector3(0.3, 4.6, 7)
+mesh = SubResource("wall_mesh")
+
+[node name="RightWall" type="MeshInstance3D" parent="."]
+position = Vector3(4, 2.6, 0)
+scale = Vector3(0.3, 4.6, 7)
+mesh = SubResource("wall_mesh")
+
+[node name="FrontLeft" type="MeshInstance3D" parent="."]
+position = Vector3(-2.6, 2.6, 3.5)
+scale = Vector3(2.8, 4.6, 0.3)
+mesh = SubResource("wall_mesh")
+
+[node name="FrontRight" type="MeshInstance3D" parent="."]
+position = Vector3(2.6, 2.6, 3.5)
+scale = Vector3(2.8, 4.6, 0.3)
+mesh = SubResource("wall_mesh")
+
+[node name="FrontTop" type="MeshInstance3D" parent="."]
+position = Vector3(0, 4.15, 3.5)
+scale = Vector3(2.4, 1.5, 0.3)
+mesh = SubResource("wall_mesh")
+
+[node name="RoofLeft" type="MeshInstance3D" parent="."]
+position = Vector3(-2.05, 5.7, 0)
+rotation = Vector3(0, 0, 0.45)
+scale = Vector3(4.8, 0.35, 8)
+mesh = SubResource("roof_mesh")
+
+[node name="RoofRight" type="MeshInstance3D" parent="."]
+position = Vector3(2.05, 5.7, 0)
+rotation = Vector3(0, 0, -0.45)
+scale = Vector3(4.8, 0.35, 8)
+mesh = SubResource("roof_mesh")
+
+[node name="Collisions" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Back" type="CollisionShape3D" parent="Collisions"]
+position = Vector3(0, 2.6, -3.5)
+scale = Vector3(8, 4.6, 0.3)
+shape = SubResource("wall_shape")
+
+[node name="Left" type="CollisionShape3D" parent="Collisions"]
+position = Vector3(-4, 2.6, 0)
+scale = Vector3(0.3, 4.6, 7)
+shape = SubResource("wall_shape")
+
+[node name="Right" type="CollisionShape3D" parent="Collisions"]
+position = Vector3(4, 2.6, 0)
+scale = Vector3(0.3, 4.6, 7)
+shape = SubResource("wall_shape")
+
+[node name="FrontLeft" type="CollisionShape3D" parent="Collisions"]
+position = Vector3(-2.6, 2.6, 3.5)
+scale = Vector3(2.8, 4.6, 0.3)
+shape = SubResource("wall_shape")
+
+[node name="FrontRight" type="CollisionShape3D" parent="Collisions"]
+position = Vector3(2.6, 2.6, 3.5)
+scale = Vector3(2.8, 4.6, 0.3)
+shape = SubResource("wall_shape")
+
+[node name="Sign" type="Label3D" parent="."]
+position = Vector3(0, 4.2, 3.72)
+text = "CASA DEL VIANDANTE"
+font_size = 24
+outline_size = 6
+
+[node name="EntranceDoor" parent="." instance=ExtResource("1")]
+position = Vector3(0, 0.6, 3.66)
+door_id = &"merchant_house_entrance"
+display_name = "Porta della Casa del Viandante"
+destination_map_id = &"merchant_house"
+destination_spawn_id = &"entrance"

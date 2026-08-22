@@ -2787,8 +2787,9 @@ func _test_battle_items() -> void:
 func _test_battle_capture() -> void:
 	var fixture := await _create_battle_fixture()
 	var roster := fixture.get("roster") as AstralRoster
+	var inventory := fixture.get("inventory") as Inventory
 	var battle := fixture.get("battle") as BattleController
-	if roster == null or battle == null:
+	if roster == null or inventory == null or battle == null:
 		_fail("Fixture incompleta nel test Cattura.")
 		await _cleanup_battle_fixture(fixture)
 		return
@@ -2802,6 +2803,10 @@ func _test_battle_capture() -> void:
 	var initial_roster_count := roster.get_astral_count()
 	var initial_experience := player_astral.experience
 	var wild_sex := wild_astral.sex
+	_expect(
+		inventory.add_item(&"runa_base", 1) == 1,
+		"Impossibile preparare la Runa Base per il test Cattura."
+	)
 	battle.choose_capture()
 	var battle_finished := await _wait_for_battle_state(
 		battle,
@@ -2826,6 +2831,10 @@ func _test_battle_capture() -> void:
 	_expect(
 		player_astral.experience == initial_experience,
 		"Catturare un selvatico assegna EXP senza un KO."
+	)
+	_expect(
+		inventory.get_quantity(&"runa_base") == 0,
+		"Il tentativo di cattura non consuma esattamente una Runa Base."
 	)
 	await _cleanup_battle_fixture(fixture)
 

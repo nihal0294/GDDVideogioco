@@ -24,6 +24,7 @@ const MAX_CAPTURE_COUNT: int = 999999
 @export_storage var earned_medals: Array[bool] = [
 	false, false, false, false, false, false, false, false,
 ]
+@export_storage var claimed_rewards: Dictionary[StringName, bool] = {}
 
 var _roster: AstralRoster = null
 
@@ -89,6 +90,18 @@ func get_medal_count() -> int:
 	return earned_medals.count(true)
 
 
+func has_claimed_reward(reward_id: StringName) -> bool:
+	return not reward_id.is_empty() and claimed_rewards.get(reward_id, false)
+
+
+func claim_reward(reward_id: StringName) -> bool:
+	if reward_id.is_empty() or has_claimed_reward(reward_id):
+		return false
+	claimed_rewards[reward_id] = true
+	profile_changed.emit()
+	return true
+
+
 func get_save_data() -> Dictionary:
 	return {
 		"player_name": player_name,
@@ -97,6 +110,7 @@ func get_save_data() -> Dictionary:
 		"captured_monster_count": captured_monster_count,
 		"earned_medals": earned_medals.duplicate(),
 		"adventure_summary": adventure_summary,
+		"claimed_rewards": _serialize_claimed_rewards(),
 	}
 
 
@@ -137,6 +151,12 @@ func load_save_data(data: Dictionary) -> void:
 			if earned_medals.size() >= MEDAL_SLOT_COUNT:
 				break
 	_normalize_medals()
+	claimed_rewards.clear()
+	var raw_rewards: Variant = data.get("claimed_rewards", {})
+	if raw_rewards is Dictionary:
+		for raw_reward_id: Variant in raw_rewards:
+			if bool((raw_rewards as Dictionary).get(raw_reward_id, false)):
+				claimed_rewards[StringName(raw_reward_id)] = true
 	florins_changed.emit(florins)
 	capture_count_changed.emit(captured_monster_count)
 	profile_changed.emit()
@@ -166,6 +186,14 @@ func _disconnect_roster() -> void:
 	):
 		_roster.astral_captured.disconnect(_on_astral_captured)
 	_roster = null
+
+
+func _serialize_claimed_rewards() -> Dictionary:
+	var result: Dictionary = {}
+	for reward_id: StringName in claimed_rewards:
+		if claimed_rewards[reward_id]:
+			result[String(reward_id)] = true
+	return result
 
 
 static func _validated_int(value: Variant, fallback: int) -> int:

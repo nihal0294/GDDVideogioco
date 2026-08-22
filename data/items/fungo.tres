@@ -9,4 +9,5 @@ display_name = "Fungo"
 description = "Un fungo di bosco commestibile dal sapore delicato."
 category = &"object"
 max_quantity = 10
+buy_price = 35
 consumable = true

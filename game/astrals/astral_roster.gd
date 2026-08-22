@@ -2,11 +2,13 @@ class_name AstralRoster
 extends Node
 
 signal astral_captured(astral: AstralInstance)
+signal astral_received(astral: AstralInstance)
 signal roster_changed()
 signal roster_reordered(from_index: int, to_index: int)
 signal active_astral_changed(astral: AstralInstance)
 signal storage_changed()
 signal astral_released(astral: AstralInstance)
+signal astral_traded(offered: AstralInstance, received: AstralInstance)
 signal astral_evolved(
 	astral: AstralInstance,
 	previous_definition: AstralDefinition,
@@ -311,24 +313,82 @@ func release_box_astral(box_index: int, slot_index: int) -> bool:
 func capture_astral(instance: AstralInstance) -> bool:
 	if instance == null or instance.definition == null:
 		return false
+	return _store_received_astral(instance.duplicate_runtime(), true)
 
+
+func _store_received_astral(
+	received_astral: AstralInstance,
+	count_as_capture: bool
+) -> bool:
+	if received_astral == null or received_astral.definition == null:
+		return false
 	var previous_active := get_active_astral()
-	var captured_astral := instance.duplicate_runtime()
-	_last_captured_astral = captured_astral
+	_last_captured_astral = received_astral
 	if _astrals.size() < MAX_PARTY_SIZE:
-		_astrals.append(captured_astral)
+		_astrals.append(received_astral)
 	else:
 		var empty_slot := _find_first_empty_storage_slot()
 		if empty_slot.x < 0:
 			_last_captured_astral = null
 			return false
-		_boxes[empty_slot.x][empty_slot.y] = captured_astral
-	astral_captured.emit(captured_astral)
+		_boxes[empty_slot.x][empty_slot.y] = received_astral
+	if count_as_capture:
+		astral_captured.emit(received_astral)
+	else:
+		astral_received.emit(received_astral)
 	if get_active_astral() != previous_active:
 		active_astral_changed.emit(get_active_astral())
 	storage_changed.emit()
 	roster_changed.emit()
 	return true
+
+
+func give_astral(definition: AstralDefinition, level: int = 1) -> AstralInstance:
+	if definition == null:
+		return null
+	var gift := AstralInstance.new()
+	gift.setup(definition, level)
+	if not _store_received_astral(gift, false):
+		return null
+	return get_last_captured_astral()
+
+
+func trade_astral(
+	offered: AstralInstance,
+	required_astral_id: StringName,
+	received_definition: AstralDefinition,
+	received_level: int = 1
+) -> AstralInstance:
+	if offered == null or offered.definition == null or received_definition == null:
+		return null
+	if offered.definition.astral_id != required_astral_id:
+		return null
+	var received := AstralInstance.new()
+	received.setup(received_definition, received_level)
+	var previous_active := get_active_astral()
+	var party_index := _astrals.find(offered)
+	if party_index >= 0:
+		_astrals[party_index] = received
+	else:
+		var replaced := false
+		for box_index: int in _boxes.size():
+			for slot_index: int in _boxes[box_index].size():
+				if _boxes[box_index][slot_index] == offered:
+					_boxes[box_index][slot_index] = received
+					replaced = true
+					break
+			if replaced:
+				break
+		if not replaced:
+			return null
+	_last_captured_astral = received
+	astral_traded.emit(offered, received)
+	astral_received.emit(received)
+	if get_active_astral() != previous_active:
+		active_astral_changed.emit(get_active_astral())
+	storage_changed.emit()
+	roster_changed.emit()
+	return received
 
 
 func get_save_data() -> Dictionary:

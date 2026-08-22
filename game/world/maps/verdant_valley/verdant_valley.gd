@@ -74,6 +74,8 @@ const WORLD_NPC_NAMES: Array[String] = ["Mastro Elio", "Ser Fiorenzo"]
 const WORLD_NPC_COLORS: Array[Color] = [Color("a56f3f"), Color("d2a33f")]
 const WORLD_NPC_GROUP_Z: float = -20.0
 const TRANSITION_PORTAL_Z: float = 66.0
+const MERCHANT_HOUSE_POSITION := Vector2(14.0, 54.0)
+const MERCHANT_HOUSE_CLEARANCE := Vector2(7.0, 7.0)
 
 @export_group("Wind")
 @export_range(0.0, 2.0, 0.05) var wind_strength: float = 1.0
@@ -206,6 +208,7 @@ const MEADOW_COLOR := Color("91c955")
 @onready var trainers_container: Node3D = $Trainers
 @onready var npcs_container: Node3D = $Npcs
 @onready var transition_portal: MapTransitionPortal = $TransitionPortal
+@onready var merchant_house: Node3D = $MerchantHouseExterior
 
 var _height_noise := FastNoiseLite.new()
 var _detail_noise := FastNoiseLite.new()
@@ -229,6 +232,7 @@ func _ready() -> void:
 	_setup_trainers()
 	_setup_world_npcs()
 	_setup_transition_portal()
+	_setup_merchant_house()
 	generation_finished.emit()
 
 
@@ -241,6 +245,13 @@ func get_location_name() -> String:
 
 
 func get_spawn_position(spawn_id: StringName = &"default") -> Vector3:
+	if spawn_id == &"from_merchant_house":
+		var house_exit := MERCHANT_HOUSE_POSITION + Vector2(0.0, 5.4)
+		return Vector3(
+			house_exit.x,
+			get_terrain_height(house_exit.x, house_exit.y) + 1.15,
+			house_exit.y
+		)
 	if spawn_id == &"from_large_island":
 		var portal_spawn_z := TRANSITION_PORTAL_Z + 4.0
 		var portal_spawn_x := get_path_center_x(portal_spawn_z)
@@ -271,6 +282,33 @@ func _setup_transition_portal() -> void:
 		transition_portal.transition_requested.connect(
 			_on_transition_portal_requested
 		)
+
+
+func _setup_merchant_house() -> void:
+	merchant_house.position = Vector3(
+		MERCHANT_HOUSE_POSITION.x,
+		get_terrain_height(
+			MERCHANT_HOUSE_POSITION.x,
+			MERCHANT_HOUSE_POSITION.y
+		),
+		MERCHANT_HOUSE_POSITION.y
+	)
+	var entrance := merchant_house.get_node_or_null("EntranceDoor") as BuildingDoor
+	if entrance != null and not entrance.transition_requested.is_connected(
+		_on_merchant_house_transition_requested
+	):
+		entrance.transition_requested.connect(
+			_on_merchant_house_transition_requested
+		)
+
+
+func _on_merchant_house_transition_requested(
+	_door: BuildingDoor,
+	destination_map_id: StringName,
+	destination_spawn_id: StringName,
+	actor: CharacterBody3D
+) -> void:
+	map_transition_requested.emit(destination_map_id, destination_spawn_id, actor)
 
 
 func _on_transition_portal_requested(
@@ -1022,6 +1060,12 @@ func _find_nature_position(
 		if (
 			absf(position_2d.x - get_path_center_x(position_2d.y)) < path_clearance
 			or position_2d.distance_to(spawn_2d) < spawn_clearance
+			or (
+				absf(position_2d.x - MERCHANT_HOUSE_POSITION.x)
+				< MERCHANT_HOUSE_CLEARANCE.x
+				and absf(position_2d.y - MERCHANT_HOUSE_POSITION.y)
+				< MERCHANT_HOUSE_CLEARANCE.y
+			)
 		):
 			continue
 		if (

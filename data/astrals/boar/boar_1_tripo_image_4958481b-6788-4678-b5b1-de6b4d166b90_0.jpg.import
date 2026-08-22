@@ -3,9 +3,10 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cmy018gpy6pko"
-path="res://.godot/imported/boar_1_tripo_image_4958481b-6788-4678-b5b1-de6b4d166b90_0.jpg-204c302bcf2a328e5a67942beaa70afb.ctex"
+path.s3tc="res://.godot/imported/boar_1_tripo_image_4958481b-6788-4678-b5b1-de6b4d166b90_0.jpg-204c302bcf2a328e5a67942beaa70afb.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "64721b06b1f0ada1eb3c56df56564716"
@@ -14,11 +15,11 @@ generator_parameters={
 [deps]
 
 source_file="res://data/astrals/boar/boar_1_tripo_image_4958481b-6788-4678-b5b1-de6b4d166b90_0.jpg"
-dest_files=["res://.godot/imported/boar_1_tripo_image_4958481b-6788-4678-b5b1-de6b4d166b90_0.jpg-204c302bcf2a328e5a67942beaa70afb.ctex"]
+dest_files=["res://.godot/imported/boar_1_tripo_image_4958481b-6788-4678-b5b1-de6b4d166b90_0.jpg-204c302bcf2a328e5a67942beaa70afb.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -40,4 +41,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=1
+detect_3d/compress_to=0

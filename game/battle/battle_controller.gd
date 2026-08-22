@@ -109,6 +109,8 @@ func setup(
 			)
 		else:
 			_wild_astral.setup(wild_definition, maxi(wild_level, 1))
+		if not _trainer_battle:
+			_wild_astral.roll_shiny(encounter_random)
 
 	if (
 		_inventory != null
@@ -158,6 +160,9 @@ func begin() -> void:
 			PRESENTATION.format_identity(_wild_astral)
 		)
 	)
+	await _play_entry_animations()
+	if _state != BattleState.INTRO:
+		return
 	await _wait_for_action()
 	if _state == BattleState.INTRO:
 		_show_commands()
@@ -387,6 +392,9 @@ func _resolve_player_move(move: AstralMoveDefinition) -> void:
 		or _wild_astral == null
 	):
 		return
+	await _play_attack_animation(player_visual, wild_visual)
+	if _state != BattleState.RESOLVING:
+		return
 	var damage_result := BattleMath.roll_damage(
 		_player_astral,
 		_wild_astral,
@@ -460,6 +468,9 @@ func _resolve_wild_counterattack() -> void:
 		return
 
 	_commit_wild_move(move_index)
+	await _play_attack_animation(wild_visual, player_visual)
+	if _state != BattleState.RESOLVING:
+		return
 	var damage_result := BattleMath.roll_damage(
 		_wild_astral,
 		_player_astral,
@@ -824,6 +835,29 @@ func _apply_astral_visual(
 	visual.show_astral(astral)
 
 
+func _play_entry_animations() -> void:
+	var player_tween := player_visual.play_entry_animation()
+	var wild_tween := wild_visual.play_entry_animation()
+	await _wait_for_visual_tween(player_tween)
+	await _wait_for_visual_tween(wild_tween)
+
+
+func _play_attack_animation(
+	attacker: AstralModel3D,
+	target: AstralModel3D
+) -> void:
+	if attacker == null or target == null:
+		return
+	var tween := attacker.play_attack_animation(target.global_position)
+	await _wait_for_visual_tween(tween)
+
+
+func _wait_for_visual_tween(tween: Tween) -> void:
+	if tween == null or not tween.is_valid() or not tween.is_running():
+		return
+	await tween.finished
+
+
 func _set_command_buttons_disabled(disabled: bool) -> void:
 	fight_button.disabled = disabled
 	items_button.disabled = disabled
@@ -854,6 +888,8 @@ func _finish_battle(
 	command_panel.hide()
 	_hide_selection_panels()
 	_set_command_buttons_disabled(true)
+	if _roster != null:
+		_roster.heal_party_to_full()
 	battle_finished.emit(outcome, captured_astral)
 
 

@@ -468,7 +468,11 @@ func _test_options_and_save_system(main: Node) -> void:
 		player_visual.rotation.y = 0.73
 	inventory.load_save_data({"cocco": 4, "legno": 3})
 	active_astral.current_health = maxi(active_astral.get_max_health() - 3, 1)
-	active_astral.experience = 47
+	var saved_astral_experience := (
+		active_astral.definition.get_total_experience_for_level(active_astral.level)
+		+ 47
+	)
+	active_astral.experience = saved_astral_experience
 	if active_astral.get_move_count() > 1:
 		active_astral.reorder_move(0, active_astral.get_move_count() - 1)
 	var saved_move_id := (
@@ -562,7 +566,7 @@ func _test_options_and_save_system(main: Node) -> void:
 	_expect(
 		loaded_astral != null
 		and loaded_astral.current_health == maxi(loaded_astral.get_max_health() - 3, 1)
-		and loaded_astral.experience == 47,
+		and loaded_astral.experience == saved_astral_experience,
 		"HP o EXP dell'Astral non sono stati ripristinati."
 	)
 	_expect(
@@ -814,6 +818,11 @@ func _test_squad_screen(main: Node) -> void:
 	) as Label
 	var level_value := squad_screen.get_node_or_null("%LevelValue") as Label
 	var experience_value := squad_screen.get_node_or_null("%ExperienceValue") as Label
+	var rarity_value := squad_screen.get_node_or_null("%RarityValue") as Label
+	var portrait_preview := squad_screen.get_node_or_null(
+		"%PortraitPreview"
+	) as SubViewportContainer
+	var portrait_model := squad_screen.get_node_or_null("%PortraitModel") as AstralModel3D
 	_expect(astral_list != null, "Lista Astral mancante dalla schermata Squadra.")
 	_expect(astral_name != null, "Nome Astral mancante dalla schermata Squadra.")
 	_expect(elements_value != null, "Elemento Astral mancante dalla schermata Squadra.")
@@ -823,6 +832,8 @@ func _test_squad_screen(main: Node) -> void:
 	_expect(magic_defense_value != null, "MDef mancante dalla scheda Astral.")
 	_expect(level_value != null, "Livello mancante dalla scheda Astral.")
 	_expect(experience_value != null, "EXP mancante dalla scheda Astral.")
+	_expect(rarity_value != null, "Rarità mancante dalla scheda Astral.")
+	_expect(portrait_preview != null, "Ritratto statico mancante dalla scheda Astral.")
 	if astral_list != null:
 		_expect(
 			astral_list.item_count == roster.get_astral_count(),
@@ -853,10 +864,24 @@ func _test_squad_screen(main: Node) -> void:
 		_expect(level_value.text == "5", "La scheda mostra un livello errato.")
 	if experience_value != null:
 		_expect(
-			"EXP 0 / 100" in experience_value.text,
+			starter != null
+			and "EXP 0 / %d" % starter.get_experience_to_next_level()
+			in experience_value.text,
 			"La scheda non mostra EXP e soglia del prossimo livello."
 		)
 	if starter != null and starter.definition != null:
+		_expect(
+			rarity_value != null
+			and starter.definition.get_rarity_name() in rarity_value.text,
+			"La scheda Squadra non mostra la rarità dell'Astral."
+		)
+		_expect(
+			portrait_preview != null
+			and portrait_preview.visible
+			and portrait_model != null
+			and portrait_model.displayed_definition == starter.definition,
+			"La scheda Squadra non mostra il modello statico selezionato."
+		)
 		var expected_identity := ASTRAL_PRESENTATION.format_identity(starter)
 		if bst_value != null:
 			_expect(
@@ -911,22 +936,46 @@ func _test_squad_screen(main: Node) -> void:
 					"Slot libero" in move_label.text,
 					"Uno slot mossa non appreso non risulta libero."
 				)
-	var heal_party_button := squad_screen.get_node_or_null("%HealPartyButton") as Button
-	_expect(heal_party_button != null, "Il tasto rapido Cura squadra è mancante.")
-	if starter != null and heal_party_button != null:
-		starter.current_health = maxi(starter.get_max_health() - 5, 1)
-		heal_party_button.emit_signal("pressed")
+	_expect(
+		squad_screen.get_node_or_null("%HealPartyButton") == null,
+		"Il vecchio pulsante di cura manuale è ancora presente."
+	)
+	var level_up_summary := main.get_node_or_null(
+		"GameUI/LevelUpSummary"
+	) as LevelUpSummary
+	_expect(level_up_summary != null, "Tabella globale del level-up mancante.")
+	if starter != null and level_up_summary != null:
+		var original_level := starter.level
+		var original_experience := starter.experience
+		var original_health := starter.current_health
+		level_up_summary.display_duration = 3.0
+		_expect(
+			starter.gain_experience(starter.get_experience_to_next_level()) == 1,
+			"Impossibile attivare il riepilogo del level-up."
+		)
 		await process_frame
+		await process_frame
+		var summary_title := level_up_summary.get_node_or_null(
+			"%TitleLabel"
+		) as Label
+		var summary_grid := level_up_summary.get_node_or_null("%StatsGrid") as GridContainer
 		_expect(
-			starter.current_health == starter.get_max_health(),
-			"Cura squadra non ripristina gli HP dello starter."
+			level_up_summary.visible
+			and summary_title != null
+			and starter.definition.display_name in summary_title.text
+			and summary_grid != null
+			and summary_grid.get_child_count() == 28,
+			"La tabella non mostra le sei statistiche ottenute durante il level-up "
+			+ "(visibile=%s, titolo=%s, celle=%d)." % [
+				level_up_summary.visible,
+				summary_title.text if summary_title != null else "mancante",
+				summary_grid.get_child_count() if summary_grid != null else -1,
+			]
 		)
-		_expect(
-			astral_list != null
-			and "HP %d/%d" % [starter.get_max_health(), starter.get_max_health()]
-			in astral_list.get_item_text(0),
-			"La lista Squadra non si aggiorna dopo la cura."
-		)
+		starter.level = original_level
+		starter.experience = original_experience
+		starter.current_health = original_health
+		level_up_summary.clear_summaries()
 
 	await _send_action(&"toggle_inventory")
 	_expect(not squad_screen.visible, "Tab non chiude Squadra.")
@@ -1101,33 +1150,82 @@ func _test_astral_instance_progression() -> void:
 
 	var threshold_instance := _make_test_astral_instance(definition, 5)
 	var threshold_health := threshold_instance.current_health
+	var threshold_required := definition.get_experience_for_next_level(5)
 	_expect(
-		threshold_instance.get_experience_to_next_level() == 100,
-		"La soglia EXP non e 100."
+		threshold_instance.experience == definition.get_total_experience_for_level(5)
+		and threshold_instance.get_experience_to_next_level() == threshold_required,
+		"L'EXP iniziale o la soglia per rarità sono errate."
 	)
-	_expect(threshold_instance.gain_experience(100) == 1, "100 EXP non danno un livello.")
 	_expect(
-		threshold_instance.level == 6 and threshold_instance.experience == 0,
-		"La soglia EXP non azzera correttamente il progresso."
+		threshold_instance.gain_experience(threshold_required) == 1,
+		"La soglia EXP non assegna un livello."
+	)
+	_expect(
+		threshold_instance.level == 6
+		and threshold_instance.experience
+		== definition.get_total_experience_for_level(6)
+		and threshold_instance.get_experience_progress_in_level() == 0,
+		"La soglia EXP cumulativa non produce il livello atteso."
 	)
 	_expect(
 		threshold_instance.current_health == threshold_health,
 		"Guadagnare EXP modifica gli HP."
 	)
 	var overflow_instance := _make_test_astral_instance(definition, 5)
-	_expect(overflow_instance.gain_experience(150) == 1, "L'overflow EXP non sale di livello.")
 	_expect(
-		overflow_instance.level == 6 and overflow_instance.experience == 50,
+		overflow_instance.gain_experience(threshold_required + 50) == 1,
+		"L'overflow EXP non sale di livello."
+	)
+	_expect(
+		overflow_instance.level == 6
+		and overflow_instance.get_experience_progress_in_level() == 50,
 		"L'overflow EXP non viene conservato."
 	)
 	var multi_level_instance := _make_test_astral_instance(definition, 5)
-	_expect(
-		multi_level_instance.gain_experience(250) == 2,
-		"250 EXP non assegnano due livelli."
+	var experience_to_level_seven := (
+		definition.get_total_experience_for_level(7)
+		- definition.get_total_experience_for_level(5)
 	)
 	_expect(
-		multi_level_instance.level == 7 and multi_level_instance.experience == 50,
+		multi_level_instance.gain_experience(experience_to_level_seven + 50) == 2,
+		"La soglia cumulativa non assegna due livelli."
+	)
+	_expect(
+		multi_level_instance.level == 7
+		and multi_level_instance.get_experience_progress_in_level() == 50,
 		"La progressione multi-level produce valori errati."
+	)
+	var rare_curve := AstralDefinition.new()
+	rare_curve.rarity = AstralDefinition.Rarity.RARE
+	_expect(
+		rare_curve.get_total_experience_for_level(20) == 9600
+		and rare_curve.get_experience_for_next_level(20) == 1513,
+		"La curva EXP Raro non rispetta la tabella allegata."
+	)
+	var epic_curve := AstralDefinition.new()
+	epic_curve.rarity = AstralDefinition.Rarity.EPIC
+	var mythic_curve := AstralDefinition.new()
+	mythic_curve.rarity = AstralDefinition.Rarity.MYTHIC
+	_expect(
+		epic_curve.get_total_experience_for_level(100) == 1500000
+		and mythic_curve.get_total_experience_for_level(100) == 2000000,
+		"Le curve EXP Epico o Mitico non sono implementate."
+	)
+	var legacy_instance := AstralInstance.new()
+	_expect(
+		legacy_instance.load_save_data(
+			{
+				"astral_id": String(definition.astral_id),
+				"level": 5,
+				"experience": 50,
+			},
+			definition,
+			{}
+		)
+		and legacy_instance.level == 5
+		and legacy_instance.experience
+		== definition.get_total_experience_for_level(5) + 50,
+		"La migrazione dei vecchi salvataggi EXP non conserva il progresso."
 	)
 	var unchanged_level := multi_level_instance.level
 	var unchanged_experience := multi_level_instance.experience
@@ -1161,6 +1259,7 @@ func _test_astral_catalog_and_evolution() -> void:
 		&"mindlith": 500,
 	}
 	_expect(definitions.size() == 17, "Il catalogo non contiene le 17 forme richieste.")
+	var rarity_counts: Array[int] = [0, 0, 0, 0, 0]
 	for definition: AstralDefinition in definitions:
 		if definition == null:
 			_fail("Il catalogo contiene una definizione Astral nulla.")
@@ -1180,6 +1279,15 @@ func _test_astral_catalog_and_evolution() -> void:
 			and FileAccess.file_exists(definition.model_path),
 			"Modello GLB mancante per %s." % definition.display_name
 		)
+		rarity_counts[definition.rarity] += 1
+	_expect(
+		rarity_counts[AstralDefinition.Rarity.COMMON] > 0
+		and rarity_counts[AstralDefinition.Rarity.UNCOMMON] > 0
+		and rarity_counts[AstralDefinition.Rarity.RARE] > 0
+		and rarity_counts[AstralDefinition.Rarity.EPIC] == 0
+		and rarity_counts[AstralDefinition.Rarity.MYTHIC] == 0,
+		"Le rarità del catalogo non rispettano l'assegnazione richiesta."
+	)
 
 	var inventory := INVENTORY_SCENE.instantiate() as Inventory
 	var roster := ASTRAL_ROSTER_SCENE.instantiate() as AstralRoster
@@ -1189,8 +1297,22 @@ func _test_astral_catalog_and_evolution() -> void:
 	var flambore := AstralInstance.new()
 	flambore.setup(
 		AstralCatalog.load_definition(&"flambore"),
-		13,
+		12,
 		AstralInstance.Sex.MALE
+	)
+	var evolution_signal_count: Array[int] = [0]
+	flambore.evolution_available.connect(
+		func() -> void: evolution_signal_count[0] += 1
+	)
+	var exp_to_evolution := (
+		flambore.definition.get_total_experience_for_level(13)
+		- flambore.experience
+	)
+	_expect(
+		flambore.gain_experience(exp_to_evolution) == 1
+		and flambore.level == 13
+		and evolution_signal_count[0] == 1,
+		"Raggiungere il livello evolutivo non segnala l'evoluzione."
 	)
 	_expect(roster.capture_astral(flambore), "Impossibile preparare Flambore per l'evoluzione.")
 	var evolving_boar := roster.get_last_captured_astral()
@@ -1383,7 +1505,11 @@ func _test_astral_roster() -> void:
 	var first_source := _make_test_astral_instance(_wild_astral, 3)
 	first_source.sex = AstralInstance.Sex.FEMALE
 	first_source.current_health = 11
-	first_source.experience = 77
+	first_source.experience = (
+		first_source.definition.get_total_experience_for_level(first_source.level)
+		+ 77
+	)
+	var first_source_experience := first_source.experience
 	var original_first_move: AstralMoveDefinition = first_source.get_move(0)
 	var original_second_move: AstralMoveDefinition = first_source.get_move(1)
 	_expect(roster.capture_astral(first_source), "AstralRoster rifiuta una cattura valida.")
@@ -1394,7 +1520,7 @@ func _test_astral_roster() -> void:
 		_expect(
 			first_captured.level == 3
 			and first_captured.current_health == 11
-			and first_captured.experience == 77,
+			and first_captured.experience == first_source_experience,
 			"La cattura non copia livello, HP o EXP."
 		)
 		_expect(
@@ -2564,17 +2690,24 @@ func _test_battle_ko_experience() -> void:
 		_fail("Mossa alleata mancante nel test EXP da KO.")
 		await _cleanup_battle_fixture(fixture)
 		return
-	player_astral.experience = 95
+	player_astral.experience = (
+		player_astral.definition.get_total_experience_for_level(player_astral.level)
+		+ 95
+	)
 	var initial_level := player_astral.level
 	var initial_health := player_astral.current_health
 	wild_astral.current_health = 1
 	var reward := BattleMath.calculate_experience_reward(wild_astral)
 	var total_experience := player_astral.experience + reward
-	var required_experience := player_astral.get_experience_to_next_level()
-	var expected_levels := floori(
-		float(total_experience) / float(required_experience)
+	var expected_level := player_astral.definition.get_level_for_total_experience(
+		total_experience
 	)
-	var expected_experience := total_experience % required_experience
+	var expected_experience := mini(
+		total_experience,
+		player_astral.definition.get_total_experience_for_level(
+			AstralInstance.MAX_LEVEL
+		)
+	)
 
 	battle.choose_fight()
 	_expect(
@@ -2589,7 +2722,7 @@ func _test_battle_ko_experience() -> void:
 	_expect(battle_finished, "Mettere KO il selvatico non termina la battaglia.")
 	_expect(_battle_outcome == &"victory", "Il KO non emette outcome victory.")
 	_expect(
-		player_astral.level == initial_level + expected_levels,
+		player_astral.level == expected_level,
 		"Il KO non assegna i livelli EXP previsti."
 	)
 	_expect(

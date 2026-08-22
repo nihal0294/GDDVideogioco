@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://game/ui/game_ui.gd" id="1_game_ui"]
 [ext_resource type="PackedScene" path="res://game/ui/menu/pause_menu.tscn" id="2_pause_menu"]
@@ -12,6 +12,8 @@
 [ext_resource type="PackedScene" path="res://game/ui/developer/developer_formulas_screen.tscn" id="10_developer_formulas"]
 [ext_resource type="PackedScene" path="res://game/ui/elements/element_chart_screen.tscn" id="11_element_chart"]
 [ext_resource type="PackedScene" path="res://game/ui/box/astral_box_screen.tscn" id="12_astral_box"]
+[ext_resource type="PackedScene" path="res://game/ui/level_up/level_up_summary.tscn" id="13_level_up"]
+[ext_resource type="PackedScene" path="res://game/ui/move_learning/move_learn_prompt.tscn" id="14_move_learn"]
 
 [node name="GameUI" type="CanvasLayer"]
 process_mode = 3
@@ -39,6 +41,10 @@ script = ExtResource("1_game_ui")
 [node name="PlayerProfileScreen" parent="." instance=ExtResource("7_profile")]
 
 [node name="NotificationToast" parent="." instance=ExtResource("4_notification")]
+
+[node name="LevelUpSummary" parent="." instance=ExtResource("13_level_up")]
+
+[node name="MoveLearnPrompt" parent="." instance=ExtResource("14_move_learn")]
 
 [node name="TransitionFade" type="ColorRect" parent="."]
 visible = false

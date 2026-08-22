@@ -2,6 +2,7 @@ class_name AstralPresentation
 extends RefCounted
 
 const DEFAULT_ELEMENT: StringName = &"neutro"
+const SHINY_SYMBOL: String = "⭐"
 
 const ELEMENT_SYMBOLS: Dictionary[StringName, String] = {
 	&"neutro": "✦",
@@ -56,8 +57,9 @@ static func get_sex_name(sex: int) -> String:
 static func format_identity(astral: AstralInstance) -> String:
 	if astral == null or astral.definition == null:
 		return "Astral sconosciuto"
-	return "%s %s %s" % [
+	return "%s%s %s %s" % [
 		astral.definition.display_name,
+		" %s" % SHINY_SYMBOL if astral.is_shiny else "",
 		get_sex_symbol(astral.sex),
 		get_element_symbol(astral.definition.primary_element),
 	]

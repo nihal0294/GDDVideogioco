@@ -133,7 +133,7 @@ func _rebuild() -> void:
 		if stored != null:
 			text = "%02d\n%s\nLv.%d" % [
 				slot_index + 1,
-				stored.definition.display_name,
+				PRESENTATION.format_identity(stored),
 				stored.level,
 			]
 		var cell := box_list.add_item(text)

@@ -8,9 +8,13 @@ const PRESENTATION := preload("res://game/astrals/astral_presentation.gd")
 
 @onready var astral_list: ItemList = %AstralList
 @onready var astral_color: ColorRect = %AstralColor
+@onready var portrait_preview: SubViewportContainer = %PortraitPreview
+@onready var portrait_viewport: SubViewport = %PortraitViewport
+@onready var portrait_model: AstralModel3D = %PortraitModel
 @onready var astral_name: Label = %AstralName
 @onready var lead_badge: Label = %LeadBadge
 @onready var position_label: Label = %PositionLabel
+@onready var rarity_value: Label = %RarityValue
 @onready var description_label: Label = %DescriptionLabel
 @onready var level_value: Label = %LevelValue
 @onready var bst_value: Label = %BstValue
@@ -31,7 +35,6 @@ const PRESENTATION := preload("res://game/astrals/astral_presentation.gd")
 @onready var move_up_button: Button = %MoveUpButton
 @onready var move_down_button: Button = %MoveDownButton
 @onready var set_lead_button: Button = %SetLeadButton
-@onready var heal_party_button: Button = %HealPartyButton
 @onready var evolve_button: Button = %EvolveButton
 @onready var close_button: Button = %CloseButton
 @onready var evolution_menu: PopupMenu = $EvolutionMenu
@@ -50,7 +53,6 @@ func _ready() -> void:
 	move_up_button.pressed.connect(_on_move_up_pressed)
 	move_down_button.pressed.connect(_on_move_down_pressed)
 	set_lead_button.pressed.connect(_on_set_lead_pressed)
-	heal_party_button.pressed.connect(_on_heal_party_pressed)
 	evolve_button.pressed.connect(_on_evolve_pressed)
 	evolution_menu.id_pressed.connect(_on_evolution_selected)
 	close_button.pressed.connect(_on_close_pressed)
@@ -217,19 +219,6 @@ func _on_set_lead_pressed() -> void:
 	_set_selected_as_lead()
 
 
-func _on_heal_party_pressed() -> void:
-	if roster == null:
-		return
-	var healed_count := roster.heal_party_to_full()
-	if healed_count > 0:
-		notification_requested.emit(
-			"Squadra curata: %d Astral hanno recuperato tutti gli HP." % healed_count
-		)
-	else:
-		notification_requested.emit("La squadra è già completamente in salute.")
-	_refresh_roster()
-
-
 func _on_evolve_pressed() -> void:
 	if roster == null or _selected_astral == null:
 		return
@@ -329,6 +318,8 @@ func _show_astral_details(astral: AstralInstance, roster_index: int) -> void:
 	)
 	lead_badge.visible = roster_index == 0
 	position_label.text = "Posizione in squadra: %d" % (roster_index + 1)
+	rarity_value.text = "Rarità: %s" % definition.get_rarity_name()
+	rarity_value.add_theme_color_override("font_color", definition.get_rarity_color())
 	level_value.text = str(astral.level)
 	bst_value.text = "%d / %d" % [
 		definition.get_base_stat_total(),
@@ -359,6 +350,7 @@ func _show_astral_details(astral: AstralInstance, roster_index: int) -> void:
 		if color_value is Color
 		else Color(0.25, 0.65, 1.0, 1.0)
 	)
+	_show_static_portrait(definition)
 
 
 func _get_maximum_health(
@@ -390,43 +382,21 @@ func _get_instance_or_definition_value(
 
 func _update_experience(
 	astral: AstralInstance,
-	definition: AstralDefinition
+	_definition: AstralDefinition
 ) -> void:
-	var current_experience_value: Variant = _get_instance_or_definition_value(
-		astral,
-		definition,
-		[&"experience", &"current_experience", &"experience_points", &"exp"]
-	)
-	var current_experience := (
-		int(current_experience_value)
-		if current_experience_value != null
-		else 0
-	)
-	var required_experience := -1
-	if astral.has_method("get_experience_to_next_level"):
-		required_experience = int(astral.call("get_experience_to_next_level"))
-	else:
-		var required_value: Variant = _get_property_value(
-			astral,
-			[
-				&"experience_to_next_level",
-				&"exp_to_next_level",
-				&"required_experience",
-			],
-			null
-		)
-		if required_value != null:
-			required_experience = int(required_value)
+	var current_experience := astral.get_experience_progress_in_level()
+	var required_experience := astral.get_experience_to_next_level()
 
 	if required_experience <= 0:
-		experience_value.text = "EXP %d    •    Prossimo livello: —" % current_experience
+		experience_value.text = "EXP totale %d    •    Livello massimo" % astral.experience
 		experience_bar.max_value = 1.0
 		experience_bar.value = 0.0
 		return
 	var remaining_experience := maxi(required_experience - current_experience, 0)
-	experience_value.text = "EXP %d / %d    •    Mancano %d" % [
+	experience_value.text = "EXP %d / %d    •    Totale %d    •    Mancano %d" % [
 		current_experience,
 		required_experience,
+		astral.experience,
 		remaining_experience,
 	]
 	experience_bar.max_value = float(required_experience)
@@ -594,9 +564,12 @@ func _object_has_property(source: Object, property_name: StringName) -> bool:
 
 func _clear_details() -> void:
 	astral_color.color = Color(0.16, 0.2, 0.28, 1.0)
+	_hide_static_portrait()
 	astral_name.text = "Nessun Astral selezionato"
 	lead_badge.hide()
 	position_label.text = "Posizione in squadra: —"
+	rarity_value.text = "Rarità: —"
+	rarity_value.remove_theme_color_override("font_color")
 	description_label.text = "Seleziona un Astral per visualizzarne la scheda."
 	level_value.text = "—"
 	bst_value.text = "—"
@@ -621,6 +594,21 @@ func _clear_details() -> void:
 	evolve_button.text = "Evoluzione non disponibile"
 
 
+func _show_static_portrait(definition: AstralDefinition) -> void:
+	portrait_model.stop_animation()
+	portrait_model.show_definition(definition)
+	portrait_preview.show()
+	portrait_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+
+
+func _hide_static_portrait() -> void:
+	if not is_node_ready():
+		return
+	portrait_model.stop_animation()
+	portrait_preview.hide()
+	portrait_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+
+
 func _focus_astral_list() -> void:
 	if not visible or _astrals.is_empty():
 		return
@@ -635,10 +623,8 @@ func _configure_focus_navigation() -> void:
 	move_down_button.focus_neighbor_left = move_down_button.get_path_to(move_up_button)
 	move_down_button.focus_neighbor_right = move_down_button.get_path_to(set_lead_button)
 	set_lead_button.focus_neighbor_left = set_lead_button.get_path_to(move_down_button)
-	set_lead_button.focus_neighbor_right = set_lead_button.get_path_to(heal_party_button)
-	heal_party_button.focus_neighbor_left = heal_party_button.get_path_to(set_lead_button)
-	heal_party_button.focus_neighbor_right = heal_party_button.get_path_to(evolve_button)
-	evolve_button.focus_neighbor_left = evolve_button.get_path_to(heal_party_button)
+	set_lead_button.focus_neighbor_right = set_lead_button.get_path_to(evolve_button)
+	evolve_button.focus_neighbor_left = evolve_button.get_path_to(set_lead_button)
 	evolve_button.focus_neighbor_right = evolve_button.get_path_to(close_button)
 	close_button.focus_neighbor_left = close_button.get_path_to(evolve_button)
 	close_button.focus_neighbor_bottom = close_button.get_path_to(astral_list)

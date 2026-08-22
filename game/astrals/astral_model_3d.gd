@@ -5,6 +5,8 @@ extends Node3D
 @export_flags_3d_render var render_layers: int = 2
 
 var displayed_definition: AstralDefinition = null
+var _animation_root: Node3D = null
+var _animation_tween: Tween = null
 var _model: Node3D = null
 
 
@@ -21,6 +23,9 @@ func show_definition(definition: AstralDefinition) -> void:
 	# di MB di mesh. Nel gioco reale viene sempre istanziato il GLB assegnato.
 	if DisplayServer.get_name() == "headless":
 		return
+	_animation_root = Node3D.new()
+	_animation_root.name = "AnimationRoot"
+	add_child(_animation_root)
 	var scene := definition.get_model_scene()
 	if scene == null:
 		_create_fallback(definition.visual_color)
@@ -30,10 +35,113 @@ func show_definition(definition: AstralDefinition) -> void:
 		_create_fallback(definition.visual_color)
 		return
 	_disable_normal_maps_without_tangents(_model)
-	add_child(_model)
+	_animation_root.add_child(_model)
 	_model.rotation_degrees = definition.model_rotation_degrees
 	_set_render_layers(_model)
 	_normalize_model(definition.model_scale_multiplier)
+
+
+func play_entry_animation() -> Tween:
+	if not _can_animate():
+		return null
+	var tween := _create_animation_tween()
+	_animation_root.position = Vector3(0.0, 0.85, 0.0)
+	_animation_root.rotation_degrees = Vector3(0.0, -18.0, -8.0)
+	_animation_root.scale = Vector3(0.28, 0.08, 0.28)
+	tween.tween_property(
+		_animation_root, "position", Vector3.ZERO, 0.48
+	).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(
+		_animation_root, "rotation_degrees", Vector3.ZERO, 0.48
+	).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(
+		_animation_root, "scale", Vector3(1.08, 0.9, 1.08), 0.48
+	).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(
+		_animation_root, "scale", Vector3.ONE, 0.16
+	).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	return tween
+
+
+func play_attack_animation(target_global_position: Vector3) -> Tween:
+	if not _can_animate():
+		return null
+	var local_direction := to_local(target_global_position)
+	local_direction.y = 0.0
+	if local_direction.length_squared() < 0.001:
+		local_direction = Vector3.FORWARD
+	local_direction = local_direction.normalized()
+	var lunge_offset := local_direction * 0.82
+	var recoil_offset := local_direction * -0.12
+	var tilt := -6.0 * signf(local_direction.x)
+	var tween := _create_animation_tween()
+	tween.tween_property(
+		_animation_root, "position", recoil_offset, 0.16
+	).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(
+		_animation_root, "scale", Vector3(1.08, 0.78, 1.08), 0.16
+	).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(
+		_animation_root, "position", lunge_offset + Vector3.UP * 0.12, 0.15
+	).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(
+		_animation_root, "scale", Vector3(0.92, 1.12, 0.92), 0.15
+	).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(
+		_animation_root, "rotation_degrees", Vector3(0.0, 0.0, tilt), 0.15
+	).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.tween_property(
+		_animation_root, "position", Vector3.ZERO, 0.24
+	).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(
+		_animation_root, "scale", Vector3.ONE, 0.24
+	).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(
+		_animation_root, "rotation_degrees", Vector3.ZERO, 0.24
+	).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	return tween
+
+
+func play_grimoire_animation() -> Tween:
+	if not _can_animate():
+		return null
+	var tween := _create_animation_tween()
+	tween.set_loops()
+	tween.tween_property(
+		_animation_root, "position", Vector3(0.0, 0.1, 0.0), 0.72
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.parallel().tween_property(
+		_animation_root, "rotation_degrees", Vector3(1.5, 7.0, 2.0), 0.72
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.parallel().tween_property(
+		_animation_root, "scale", Vector3(1.025, 0.975, 1.025), 0.72
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(
+		_animation_root, "position", Vector3(0.0, 0.025, 0.0), 0.9
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.parallel().tween_property(
+		_animation_root, "rotation_degrees", Vector3(-1.0, -7.0, -2.0), 0.9
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.parallel().tween_property(
+		_animation_root, "scale", Vector3(0.99, 1.015, 0.99), 0.9
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(
+		_animation_root, "position", Vector3.ZERO, 0.72
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.parallel().tween_property(
+		_animation_root, "rotation_degrees", Vector3.ZERO, 0.72
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.parallel().tween_property(
+		_animation_root, "scale", Vector3.ONE, 0.72
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	return tween
+
+
+func stop_animation() -> void:
+	if _animation_tween != null and _animation_tween.is_valid():
+		_animation_tween.kill()
+	_animation_tween = null
+	_reset_animation_root()
 
 
 func _normalize_model(scale_multiplier: float) -> void:
@@ -116,10 +224,41 @@ func _create_fallback(color: Color) -> void:
 	mesh_instance.position.y = 1.1
 	mesh_instance.layers = render_layers
 	_model = mesh_instance
-	add_child(_model)
+	_animation_root.add_child(_model)
 
 
 func _clear_model() -> void:
-	if _model != null and is_instance_valid(_model):
-		_model.queue_free()
+	stop_animation()
+	if _animation_root != null and is_instance_valid(_animation_root):
+		_animation_root.queue_free()
+	_animation_root = null
 	_model = null
+
+
+func _can_animate() -> bool:
+	return (
+		displayed_definition != null
+		and _animation_root != null
+		and is_instance_valid(_animation_root)
+	)
+
+
+func _create_animation_tween() -> Tween:
+	stop_animation()
+	var tween := create_tween()
+	_animation_tween = tween
+	tween.finished.connect(_on_animation_finished.bind(tween), CONNECT_ONE_SHOT)
+	return tween
+
+
+func _on_animation_finished(finished_tween: Tween) -> void:
+	if _animation_tween == finished_tween:
+		_animation_tween = null
+
+
+func _reset_animation_root() -> void:
+	if _animation_root == null or not is_instance_valid(_animation_root):
+		return
+	_animation_root.position = Vector3.ZERO
+	_animation_root.rotation_degrees = Vector3.ZERO
+	_animation_root.scale = Vector3.ONE

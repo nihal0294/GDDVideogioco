@@ -1,6 +1,7 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://game/ui/squad/squad_screen.gd" id="1_squad"]
+[ext_resource type="Script" path="res://game/astrals/astral_model_3d.gd" id="2_model"]
 
 [sub_resource type="StyleBoxFlat" id="Style_panel"]
 bg_color = Color(0.055, 0.075, 0.11, 0.97)
@@ -29,6 +30,13 @@ content_margin_left = 14.0
 content_margin_top = 8.0
 content_margin_right = 14.0
 content_margin_bottom = 8.0
+
+[sub_resource type="Environment" id="Environment_portrait"]
+background_mode = 1
+background_color = Color(0.055, 0.075, 0.11, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.54, 0.62, 0.72, 1)
+ambient_light_energy = 0.72
 
 [node name="SquadScreen" type="Control"]
 visible = false
@@ -151,12 +159,55 @@ theme_override_constants/separation = 8
 layout_mode = 2
 theme_override_constants/separation = 18
 
-[node name="AstralColor" type="ColorRect" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(84, 84)
+[node name="PortraitFrame" type="Control" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity"]
+custom_minimum_size = Vector2(112, 112)
 layout_mode = 2
+
+[node name="AstralColor" type="ColorRect" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity/PortraitFrame"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 color = Color(0.25, 0.65, 1, 1)
+
+[node name="PortraitPreview" type="SubViewportContainer" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity/PortraitFrame"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+stretch = true
+
+[node name="PortraitViewport" type="SubViewport" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity/PortraitFrame/PortraitPreview"]
+unique_name_in_owner = true
+own_world_3d = true
+size = Vector2i(256, 256)
+render_target_update_mode = 0
+
+[node name="PortraitLight" type="DirectionalLight3D" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity/PortraitFrame/PortraitPreview/PortraitViewport"]
+transform = Transform3D(0.866025, 0.25, -0.433013, 0, 0.866025, 0.5, 0.5, -0.433013, 0.75, 0, 0, 0)
+light_color = Color(1, 0.91, 0.78, 1)
+light_energy = 1.45
+shadow_enabled = true
+
+[node name="PortraitCamera" type="Camera3D" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity/PortraitFrame/PortraitPreview/PortraitViewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 4.8)
+environment = SubResource("Environment_portrait")
+fov = 40.0
+
+[node name="PortraitModel" type="Node3D" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity/PortraitFrame/PortraitPreview/PortraitViewport"]
+unique_name_in_owner = true
+script = ExtResource("2_model")
+target_height = 2.05
+render_layers = 1
 
 [node name="IdentityText" type="VBoxContainer" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity"]
 layout_mode = 2
@@ -182,6 +233,12 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.61, 0.72, 0.8, 1)
 text = "Posizione in squadra: 1"
+
+[node name="RarityValue" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity/IdentityText"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.78, 0.88, 1)
+text = "Rarità: Comune"
 
 [node name="DescriptionLabel" type="Label" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details"]
 unique_name_in_owner = true
@@ -411,13 +468,6 @@ custom_minimum_size = Vector2(180, 44)
 layout_mode = 2
 disabled = true
 text = "Rendi primo"
-
-[node name="HealPartyButton" type="Button" parent="OuterMargin/Layout/Footer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(175, 44)
-layout_mode = 2
-tooltip_text = "Cura temporanea di sviluppo: ripristina gli HP di tutta la squadra."
-text = "Cura squadra"
 
 [node name="EvolveButton" type="Button" parent="OuterMargin/Layout/Footer"]
 unique_name_in_owner = true

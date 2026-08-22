@@ -1,6 +1,7 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://game/ui/grimoire/grimoire_screen.gd" id="1_screen"]
+[ext_resource type="Script" path="res://game/astrals/astral_model_3d.gd" id="2_model"]
 
 [sub_resource type="StyleBoxFlat" id="Style_panel"]
 bg_color = Color(0.055, 0.075, 0.11, 0.97)
@@ -13,6 +14,13 @@ corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
+
+[sub_resource type="Environment" id="Environment_preview"]
+background_mode = 1
+background_color = Color(0.055, 0.075, 0.11, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.54, 0.62, 0.72, 1)
+ambient_light_energy = 0.72
 
 [node name="GrimoireScreen" type="Control"]
 visible = false
@@ -132,11 +140,54 @@ theme_override_constants/separation = 8
 layout_mode = 2
 theme_override_constants/separation = 18
 
-[node name="PortraitColor" type="ColorRect" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(116, 116)
+[node name="PortraitFrame" type="Control" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity"]
+custom_minimum_size = Vector2(160, 160)
 layout_mode = 2
+
+[node name="PortraitColor" type="ColorRect" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity/PortraitFrame"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 color = Color(0.06, 0.075, 0.095, 1)
+
+[node name="PortraitPreview" type="SubViewportContainer" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity/PortraitFrame"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+stretch = true
+
+[node name="PreviewViewport" type="SubViewport" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity/PortraitFrame/PortraitPreview"]
+unique_name_in_owner = true
+own_world_3d = true
+size = Vector2i(320, 320)
+render_target_update_mode = 0
+
+[node name="PreviewLight" type="DirectionalLight3D" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity/PortraitFrame/PortraitPreview/PreviewViewport"]
+transform = Transform3D(0.866025, 0.25, -0.433013, 0, 0.866025, 0.5, 0.5, -0.433013, 0.75, 0, 0, 0)
+light_color = Color(1, 0.91, 0.78, 1)
+light_energy = 1.45
+shadow_enabled = true
+
+[node name="PreviewCamera" type="Camera3D" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity/PortraitFrame/PortraitPreview/PreviewViewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 4.8)
+environment = SubResource("Environment_preview")
+fov = 40.0
+
+[node name="PreviewModel" type="Node3D" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity/PortraitFrame/PortraitPreview/PreviewViewport"]
+unique_name_in_owner = true
+script = ExtResource("2_model")
+target_height = 2.05
+render_layers = 1
 
 [node name="IdentityText" type="VBoxContainer" parent="OuterMargin/Layout/Content/DetailsPanel/DetailsMargin/Details/Identity"]
 layout_mode = 2

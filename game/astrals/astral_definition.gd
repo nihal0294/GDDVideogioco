@@ -4,6 +4,27 @@ extends Resource
 const MIN_BASE_STAT: int = 5
 const MAX_BASE_STAT: int = 255
 const MAX_BASE_STAT_TOTAL: int = 1200
+const MAX_LEVEL: int = 100
+
+enum Rarity {
+	COMMON,
+	UNCOMMON,
+	RARE,
+	EPIC,
+	MYTHIC,
+}
+
+const RARITY_NAMES: Array[String] = [
+	"Comune", "Non-Comune", "Raro", "Epico", "Mitico",
+]
+const RARITY_EXP_MULTIPLIER_TENTHS: Array[int] = [8, 10, 12, 15, 20]
+const RARITY_COLORS: Array[Color] = [
+	Color("b9c0c9"),
+	Color("65cf7a"),
+	Color("62a8ff"),
+	Color("c979ff"),
+	Color("ffc857"),
+]
 
 var _max_health: int = 50
 var _attack_power: int = 50
@@ -53,6 +74,7 @@ var _speed: int = 50
 		_speed = _clamp_base_stat(value, _speed)
 
 @export_group("Progressione e combattimento")
+@export_enum("Comune", "Non-Comune", "Raro", "Epico", "Mitico") var rarity: int = Rarity.COMMON
 @export_range(0, 99999, 1) var experience_yield: int = 25
 @export var starting_moves: Array[AstralMoveDefinition] = []
 @export var learnset: Array[AstralLearnsetEntry] = []
@@ -77,6 +99,67 @@ func get_base_stat_total() -> int:
 		+ _magic_defense
 		+ _speed
 	)
+
+
+func get_rarity_name() -> String:
+	return RARITY_NAMES[clampi(rarity, Rarity.COMMON, Rarity.MYTHIC)]
+
+
+func get_rarity_color() -> Color:
+	return RARITY_COLORS[clampi(rarity, Rarity.COMMON, Rarity.MYTHIC)]
+
+
+func get_experience_multiplier() -> float:
+	return float(
+		RARITY_EXP_MULTIPLIER_TENTHS[
+			clampi(rarity, Rarity.COMMON, Rarity.MYTHIC)
+		]
+	) / 10.0
+
+
+func get_total_experience_for_level(target_level: int) -> int:
+	var resolved_level := clampi(target_level, 1, MAX_LEVEL)
+	if resolved_level <= 1:
+		return 0
+	var level_cube := resolved_level * resolved_level * resolved_level
+	var multiplier_tenths := RARITY_EXP_MULTIPLIER_TENTHS[
+		clampi(rarity, Rarity.COMMON, Rarity.MYTHIC)
+	]
+	return floori(float(multiplier_tenths * level_cube) / 10.0)
+
+
+func get_experience_for_next_level(current_level: int) -> int:
+	var resolved_level := clampi(current_level, 1, MAX_LEVEL)
+	if resolved_level >= MAX_LEVEL:
+		return 0
+	return (
+		get_total_experience_for_level(resolved_level + 1)
+		- get_total_experience_for_level(resolved_level)
+	)
+
+
+func get_level_for_total_experience(total_experience: int) -> int:
+	var resolved_level := 1
+	var safe_total := maxi(total_experience, 0)
+	for candidate_level: int in range(2, MAX_LEVEL + 1):
+		if safe_total < get_total_experience_for_level(candidate_level):
+			break
+		resolved_level = candidate_level
+	return resolved_level
+
+
+static func rarity_from_string(value: String) -> int:
+	match value.strip_edges().to_lower().replace("-", "_").replace(" ", "_"):
+		"non_comune", "uncommon":
+			return Rarity.UNCOMMON
+		"raro", "rare":
+			return Rarity.RARE
+		"epico", "epic":
+			return Rarity.EPIC
+		"mitico", "mythic":
+			return Rarity.MYTHIC
+		_:
+			return Rarity.COMMON
 
 
 func get_model_scene() -> PackedScene:
@@ -222,6 +305,14 @@ func get_moves_available_at_level(level: int) -> Array[AstralMoveDefinition]:
 	)
 	for entry: AstralLearnsetEntry in sorted_entries:
 		if entry != null and entry.required_level <= level:
+			_append_unique_move(result, entry.move)
+	return result
+
+
+func get_moves_learned_at_level(level: int) -> Array[AstralMoveDefinition]:
+	var result: Array[AstralMoveDefinition] = []
+	for entry: AstralLearnsetEntry in learnset:
+		if entry != null and entry.required_level == level:
 			_append_unique_move(result, entry.move)
 	return result
 

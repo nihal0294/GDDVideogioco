@@ -25,9 +25,9 @@ environment = SubResource("Environment_main")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.8191522, 0.4698461, -0.32898983, 0, 0.5735765, 0.819152, 0.5735762, -0.67101014, 0.46984646, 0, 0, 0)
-light_cull_mask = 1
 light_color = Color(1, 0.94, 0.84, 1)
 light_energy = 1.2
+light_cull_mask = 1
 shadow_enabled = true
 directional_shadow_mode = 1
 directional_shadow_max_distance = 120.0

@@ -71,7 +71,8 @@ func get_all_astrals() -> Array[AstralInstance]:
 	return result
 
 
-## Cura temporanea di tutta la squadra attiva. Non coinvolge gli Astral nei Box.
+## Ripristina tutta la squadra attiva, inclusi gli Astral sconfitti.
+## Gli Astral nei Box non partecipano al combattimento e non vengono coinvolti.
 func heal_party_to_full() -> int:
 	var healed_count := 0
 	for astral: AstralInstance in _astrals:

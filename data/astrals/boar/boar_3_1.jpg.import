@@ -3,9 +3,10 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://xwmp4m8kpte5"
-path="res://.godot/imported/boar_3_1.jpg-869993107dd2d383bdabe5086aa05b21.ctex"
+path.s3tc="res://.godot/imported/boar_3_1.jpg-869993107dd2d383bdabe5086aa05b21.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "c4689241b2a1ad266f109078991d5be1"
@@ -14,11 +15,11 @@ generator_parameters={
 [deps]
 
 source_file="res://data/astrals/boar/boar_3_1.jpg"
-dest_files=["res://.godot/imported/boar_3_1.jpg-869993107dd2d383bdabe5086aa05b21.ctex"]
+dest_files=["res://.godot/imported/boar_3_1.jpg-869993107dd2d383bdabe5086aa05b21.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -40,4 +41,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=1
+detect_3d/compress_to=0

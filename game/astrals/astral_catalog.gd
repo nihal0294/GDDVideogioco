@@ -72,12 +72,13 @@ static func _ensure_loaded() -> void:
 		return
 	var data := raw_data as Dictionary
 	_build_moves(data.get("moves", {}) as Dictionary)
+	var rarities := data.get("rarities", {}) as Dictionary
 	var raw_species: Variant = data.get("species", [])
 	if not (raw_species is Array):
 		return
 	for raw_entry: Variant in raw_species as Array:
 		if raw_entry is Dictionary:
-			_build_definition(raw_entry as Dictionary)
+			_build_definition(raw_entry as Dictionary, rarities)
 	_resolve_inheritance(raw_species as Array)
 	_resolve_evolutions(raw_species as Array)
 
@@ -102,7 +103,7 @@ static func _build_moves(raw_moves: Dictionary) -> void:
 		_moves[move.move_id] = move
 
 
-static func _build_definition(data: Dictionary) -> void:
+static func _build_definition(data: Dictionary, rarities: Dictionary) -> void:
 	var astral_id := StringName(data.get("id", ""))
 	if astral_id.is_empty():
 		return
@@ -120,6 +121,9 @@ static func _build_definition(data: Dictionary) -> void:
 			int(stats[0]), int(stats[1]), int(stats[2]),
 			int(stats[3]), int(stats[4]), int(stats[5])
 		)
+	definition.rarity = AstralDefinition.rarity_from_string(
+		String(rarities.get(String(astral_id), data.get("rarity", "comune")))
+	)
 	definition.experience_yield = maxi(int(data.get("experience_yield", 25)), 0)
 	definition.visual_color = Color.from_string(
 		String(data.get("color", "73bfff")), Color(0.45, 0.75, 1.0, 1.0)

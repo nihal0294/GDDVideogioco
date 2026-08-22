@@ -8,6 +8,9 @@ const PRESENTATION := preload("res://game/astrals/astral_presentation.gd")
 @onready var entry_list: ItemList = %EntryList
 @onready var progress_label: Label = %ProgressLabel
 @onready var portrait_color: ColorRect = %PortraitColor
+@onready var portrait_preview: SubViewportContainer = %PortraitPreview
+@onready var preview_viewport: SubViewport = %PreviewViewport
+@onready var preview_model: AstralModel3D = %PreviewModel
 @onready var entry_number: Label = %EntryNumber
 @onready var astral_name: Label = %AstralName
 @onready var discovery_status: Label = %DiscoveryStatus
@@ -52,6 +55,7 @@ func close() -> void:
 	var focus_owner := get_viewport().gui_get_focus_owner()
 	if focus_owner != null and is_ancestor_of(focus_owner):
 		focus_owner.release_focus()
+	_hide_animated_preview()
 	hide()
 
 
@@ -106,6 +110,7 @@ func _show_entry(entry: GrimoireEntry) -> void:
 	var state := grimoire.get_discovery_state(entry.get_entry_id())
 	entry_number.text = "Voce n. %03d" % entry.entry_number
 	if state == Grimoire.DiscoveryState.UNKNOWN or entry.astral == null:
+		_hide_animated_preview()
 		portrait_color.color = Color(0.06, 0.075, 0.095, 1.0)
 		astral_name.text = "Specie sconosciuta"
 		discovery_status.text = "NON ANCORA AVVISTATO"
@@ -124,6 +129,7 @@ func _show_entry(entry: GrimoireEntry) -> void:
 	elements_value.text = _format_elements(definition)
 	spawn_value.text = entry.get_spawn_zones_text()
 	if state == Grimoire.DiscoveryState.SEEN:
+		_hide_animated_preview()
 		var color := definition.visual_color
 		var luminance := color.get_luminance()
 		portrait_color.color = Color(luminance, luminance, luminance, 1.0)
@@ -158,7 +164,12 @@ func _show_entry(entry: GrimoireEntry) -> void:
 		if move != null:
 			move_names.append("%s (CD %d)" % [move.display_name, move.cooldown_turns])
 	moves_value.text = " • ".join(move_names) if not move_names.is_empty() else "Nessuna"
-	cards_value.text = "Animazione 3D bloccata — carte associate mancanti."
+	if not definition.model_path.is_empty():
+		_show_animated_preview(definition)
+		cards_value.text = "Anteprima 3D animata."
+	else:
+		_hide_animated_preview()
+		cards_value.text = "Animazione 3D bloccata — carte associate mancanti."
 
 
 func _update_progress() -> void:
@@ -201,6 +212,7 @@ func _focus_entry_list() -> void:
 
 
 func _clear_details() -> void:
+	_hide_animated_preview()
 	entry_number.text = "Voce n. ---"
 	astral_name.text = "Nessuna voce selezionata"
 	discovery_status.text = ""
@@ -213,6 +225,21 @@ func _clear_details() -> void:
 	stats_value.text = "—"
 	moves_value.text = "—"
 	cards_value.text = "—"
+
+
+func _show_animated_preview(definition: AstralDefinition) -> void:
+	preview_model.show_definition(definition)
+	portrait_preview.show()
+	preview_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	preview_model.play_grimoire_animation()
+
+
+func _hide_animated_preview() -> void:
+	if not is_node_ready():
+		return
+	preview_model.stop_animation()
+	portrait_preview.hide()
+	preview_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 
 
 func _disconnect_grimoire() -> void:

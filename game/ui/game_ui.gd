@@ -12,11 +12,15 @@ extends CanvasLayer
 @onready var grimoire_screen: GrimoireScreen = $GrimoireScreen
 @onready var player_profile_screen: PlayerProfileScreen = $PlayerProfileScreen
 @onready var notification_toast: NotificationToast = $NotificationToast
+@onready var level_up_summary: LevelUpSummary = $LevelUpSummary
+@onready var move_learn_prompt: MoveLearnPrompt = $MoveLearnPrompt
 @onready var transition_fade: ColorRect = $TransitionFade
 
 var _pause_locks: Dictionary[StringName, bool] = {}
 var _fade_tween: Tween = null
 var _save_manager: SaveManager = null
+var _level_up_roster: AstralRoster = null
+var _observed_astrals: Array[AstralInstance] = []
 
 
 func _ready() -> void:
@@ -40,7 +44,14 @@ func _ready() -> void:
 	astral_box_screen.notification_requested.connect(show_notification)
 	grimoire_screen.close_requested.connect(_on_grimoire_close_requested)
 	player_profile_screen.close_requested.connect(_on_player_profile_close_requested)
+	move_learn_prompt.replacement_confirmed.connect(
+		_on_move_replacement_confirmed
+	)
+	move_learn_prompt.learning_declined.connect(_on_move_learning_declined)
+	move_learn_prompt.request_started.connect(_sync_pause_state)
+	move_learn_prompt.request_finished.connect(_sync_pause_state)
 	squad_screen.setup(_find_astral_roster())
+	_set_level_up_roster(_find_astral_roster())
 	astral_box_screen.setup(_find_astral_roster())
 	grimoire_screen.setup(_find_grimoire())
 	player_profile_screen.setup(_find_player_profile())
@@ -60,6 +71,7 @@ func setup(
 		resolved_roster = _find_astral_roster()
 	squad_screen.setup(resolved_roster, inventory)
 	astral_box_screen.setup(resolved_roster, inventory)
+	_set_level_up_roster(resolved_roster)
 	grimoire_screen.setup(grimoire if grimoire != null else _find_grimoire())
 	player_profile_screen.setup(
 		profile if profile != null else _find_player_profile()
@@ -158,15 +170,11 @@ func _input(event: InputEvent) -> void:
 	var key_event: InputEventKey = event as InputEventKey
 	if key_event != null and key_event.echo:
 		return
+	if move_learn_prompt.visible and _is_screen_toggle_event(event):
+		get_viewport().set_input_as_handled()
+		return
 	if not _pause_locks.is_empty():
-		if (
-			event.is_action_pressed("toggle_menu")
-			or event.is_action_pressed("toggle_inventory")
-			or event.is_action_pressed("toggle_squad")
-			or event.is_action_pressed("toggle_astral_box")
-			or event.is_action_pressed("toggle_grimoire")
-			or event.is_action_pressed("toggle_player_profile")
-		):
+		if _is_screen_toggle_event(event):
 			get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed("toggle_menu"):
@@ -428,6 +436,18 @@ func _sync_pause_state() -> void:
 		or astral_box_screen.visible
 		or grimoire_screen.visible
 		or player_profile_screen.visible
+		or move_learn_prompt.visible
+	)
+
+
+func _is_screen_toggle_event(event: InputEvent) -> bool:
+	return (
+		event.is_action_pressed("toggle_menu")
+		or event.is_action_pressed("toggle_inventory")
+		or event.is_action_pressed("toggle_squad")
+		or event.is_action_pressed("toggle_astral_box")
+		or event.is_action_pressed("toggle_grimoire")
+		or event.is_action_pressed("toggle_player_profile")
 	)
 
 
@@ -466,6 +486,131 @@ func _find_save_manager() -> SaveManager:
 	if main_node == null:
 		return null
 	return main_node.get_node_or_null("SaveManager") as SaveManager
+
+
+func _set_level_up_roster(source_roster: AstralRoster) -> void:
+	_disconnect_level_up_observers()
+	_level_up_roster = source_roster
+	if _level_up_roster == null:
+		return
+	if not _level_up_roster.roster_changed.is_connected(
+		_refresh_level_up_observers
+	):
+		_level_up_roster.roster_changed.connect(_refresh_level_up_observers)
+	_refresh_level_up_observers()
+
+
+func _refresh_level_up_observers() -> void:
+	_disconnect_astral_level_up_signals()
+	if _level_up_roster == null:
+		return
+	for astral: AstralInstance in _level_up_roster.get_all_astrals():
+		if astral == null:
+			continue
+		var callback := Callable(self, "_on_astral_leveled_up").bind(astral)
+		if not astral.leveled_up.is_connected(callback):
+			astral.leveled_up.connect(callback)
+		var learned_callback := Callable(self, "_on_astral_move_learned").bind(
+			astral
+		)
+		if not astral.move_learned.is_connected(learned_callback):
+			astral.move_learned.connect(learned_callback)
+		var requested_callback := Callable(
+			self,
+			"_on_astral_move_learning_requested"
+		).bind(astral)
+		if not astral.move_learning_requested.is_connected(requested_callback):
+			astral.move_learning_requested.connect(requested_callback)
+		_observed_astrals.append(astral)
+		for pending_move: AstralMoveDefinition in astral.get_pending_moves():
+			_on_astral_move_learning_requested(pending_move, astral)
+
+
+func _disconnect_level_up_observers() -> void:
+	_disconnect_astral_level_up_signals()
+	if (
+		_level_up_roster != null
+		and is_instance_valid(_level_up_roster)
+		and _level_up_roster.roster_changed.is_connected(
+			_refresh_level_up_observers
+		)
+	):
+		_level_up_roster.roster_changed.disconnect(_refresh_level_up_observers)
+
+
+func _disconnect_astral_level_up_signals() -> void:
+	for astral: AstralInstance in _observed_astrals:
+		if astral == null or not is_instance_valid(astral):
+			continue
+		var callback := Callable(self, "_on_astral_leveled_up").bind(astral)
+		if astral.leveled_up.is_connected(callback):
+			astral.leveled_up.disconnect(callback)
+		var learned_callback := Callable(self, "_on_astral_move_learned").bind(
+			astral
+		)
+		if astral.move_learned.is_connected(learned_callback):
+			astral.move_learned.disconnect(learned_callback)
+		var requested_callback := Callable(
+			self,
+			"_on_astral_move_learning_requested"
+		).bind(astral)
+		if astral.move_learning_requested.is_connected(requested_callback):
+			astral.move_learning_requested.disconnect(requested_callback)
+	_observed_astrals.clear()
+
+
+func _on_astral_leveled_up(
+	previous_level: int,
+	new_level: int,
+	astral: AstralInstance
+) -> void:
+	level_up_summary.enqueue_summary(astral, previous_level, new_level)
+
+
+func _on_astral_move_learned(
+	move: AstralMoveDefinition,
+	astral: AstralInstance
+) -> void:
+	if move == null or astral == null or astral.definition == null:
+		return
+	show_notification(
+		"%s ha imparato %s." % [
+			astral.definition.display_name,
+			move.display_name,
+		],
+		true
+	)
+
+
+func _on_astral_move_learning_requested(
+	move: AstralMoveDefinition,
+	astral: AstralInstance
+) -> void:
+	move_learn_prompt.enqueue_request(astral, move)
+
+
+func _on_move_replacement_confirmed(
+	astral: AstralInstance,
+	move: AstralMoveDefinition,
+	replaced_index: int
+) -> void:
+	if not astral.learn_pending_move_replacing(move, replaced_index):
+		show_notification("Non è stato possibile imparare la nuova mossa.", true)
+
+
+func _on_move_learning_declined(
+	astral: AstralInstance,
+	move: AstralMoveDefinition
+) -> void:
+	if not astral.decline_pending_move(move):
+		return
+	show_notification(
+		"%s ha rinunciato a imparare %s." % [
+			astral.definition.display_name,
+			move.display_name,
+		],
+		true
+	)
 
 
 func _stop_fade_tween() -> void:

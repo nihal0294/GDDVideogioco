@@ -110,6 +110,26 @@
     "overgrowth_trance": {"name":"Overgrowth Trance","element":"natura","class":"status","power":0,"cost":4,"description":"Setup: in futuro aumenterà fortemente MAtk e Speed."}
   },
 
+  "rarities": {
+    "venomquill": "raro",
+    "flambore": "comune",
+    "pyrobore": "comune",
+    "fortessbore": "comune",
+    "vorix": "non-comune",
+    "saurolix": "non-comune",
+    "phrynolix": "non-comune",
+    "panthor": "raro",
+    "sharkra": "raro",
+    "fangoras": "raro",
+    "silphy": "comune",
+    "airdon": "comune",
+    "eldrakans": "comune",
+    "pandalith": "non-comune",
+    "aikilith": "non-comune",
+    "frostalith": "non-comune",
+    "mindlith": "non-comune"
+  },
+
   "species": [
     {"id":"venomquill","name":"Venomquill","species":"Ornitorinco","description":"Attaccante magico resistente che accumula tossine nello sperone.","elements":["veleno"],"stats":[110,20,80,110,115,55],"experience_yield":49,"color":"8657b8","model":"res://data/astrals/platypus/platypus_1.glb","model_rotation":[0,-90,5],"learnset":[[5,"acrid_spit"],[5,"spur_rake"],[12,"caustic_mist"],[22,"toxin_current"],[34,"noxious_surge"],[48,"calcar_injection"],[67,"venom_reservoir"],[88,"neurotoxic_flood"]]},
 

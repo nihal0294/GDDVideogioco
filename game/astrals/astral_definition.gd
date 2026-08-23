@@ -40,6 +40,7 @@ var _speed: int = 50
 @export var primary_element: StringName = &"neutro"
 @export var secondary_element: StringName = &""
 @export var species_name: String = "Sconosciuta"
+@export var species_types: Array[StringName] = []
 
 @export_group("Statistiche base")
 @export_range(5, 255, 1) var max_health: int:
@@ -281,6 +282,27 @@ func has_element(element_id: StringName) -> bool:
 		primary_element == element_id
 		or secondary_element == element_id
 	)
+
+
+func set_species_types(raw_types: Variant) -> bool:
+	var normalized := AstralSpecies.normalize_types(raw_types)
+	if normalized.is_empty():
+		return false
+	species_types = normalized
+	emit_changed()
+	return true
+
+
+func get_species_types() -> Array[StringName]:
+	return species_types.duplicate()
+
+
+func get_species_types_text() -> String:
+	return AstralSpecies.format_types(species_types)
+
+
+func has_species_type(species_id: StringName) -> bool:
+	return AstralSpecies.is_valid(species_id) and species_types.has(species_id)
 
 
 func get_all_moves() -> Array[AstralMoveDefinition]:

@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3]
+[gd_scene load_steps=19 format=3]
 
 [ext_resource type="Script" path="res://game/ui/game_ui.gd" id="1_game_ui"]
 [ext_resource type="PackedScene" path="res://game/ui/menu/pause_menu.tscn" id="2_pause_menu"]
@@ -17,6 +17,7 @@
 [ext_resource type="PackedScene" path="res://game/ui/shop/shop_screen.tscn" id="15_shop"]
 [ext_resource type="PackedScene" path="res://game/ui/exchange/astral_exchange_screen.tscn" id="16_exchange"]
 [ext_resource type="PackedScene" path="res://game/ui/gambling/coin_flip_screen.tscn" id="17_coin"]
+[ext_resource type="PackedScene" path="res://game/ui/synergy/synergy_screen.tscn" id="18_synergy"]
 
 [node name="GameUI" type="CanvasLayer"]
 process_mode = 3
@@ -30,6 +31,8 @@ script = ExtResource("1_game_ui")
 [node name="DeveloperFormulasScreen" parent="." instance=ExtResource("10_developer_formulas")]
 
 [node name="ElementChartScreen" parent="." instance=ExtResource("11_element_chart")]
+
+[node name="SynergyScreen" parent="." instance=ExtResource("18_synergy")]
 
 [node name="SaveSlotsScreen" parent="." instance=ExtResource("9_save_slots")]
 

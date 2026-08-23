@@ -5,6 +5,7 @@ extends CanvasLayer
 @onready var options_screen: OptionsScreen = $OptionsScreen
 @onready var developer_formulas_screen: DeveloperFormulasScreen = $DeveloperFormulasScreen
 @onready var element_chart_screen: ElementChartScreen = $ElementChartScreen
+@onready var synergy_screen: SynergyScreen = $SynergyScreen
 @onready var save_slots_screen: SaveSlotsScreen = $SaveSlotsScreen
 @onready var inventory_screen: InventoryScreen = $InventoryScreen
 @onready var squad_screen: SquadScreen = $SquadScreen
@@ -32,12 +33,14 @@ func _ready() -> void:
 	pause_menu.options_requested.connect(_on_options_requested)
 	pause_menu.developer_formulas_requested.connect(_on_developer_formulas_requested)
 	pause_menu.element_chart_requested.connect(_on_element_chart_requested)
+	pause_menu.synergies_requested.connect(_on_synergies_requested)
 	pause_menu.save_requested.connect(_on_save_requested)
 	pause_menu.load_requested.connect(_on_load_requested)
 	options_screen.apply_requested.connect(_on_options_apply_requested)
 	options_screen.back_requested.connect(_return_to_pause_menu)
 	developer_formulas_screen.back_requested.connect(_return_to_pause_menu)
 	element_chart_screen.back_requested.connect(_return_to_pause_menu)
+	synergy_screen.back_requested.connect(_return_to_pause_menu)
 	save_slots_screen.save_slot_requested.connect(_on_save_slot_requested)
 	save_slots_screen.load_slot_requested.connect(_on_load_slot_requested)
 	save_slots_screen.back_requested.connect(_return_to_pause_menu)
@@ -65,6 +68,7 @@ func _ready() -> void:
 	)
 	coin_flip_screen.notification_requested.connect(show_notification)
 	squad_screen.setup(_find_astral_roster())
+	synergy_screen.setup(_find_astral_roster())
 	_set_level_up_roster(_find_astral_roster())
 	astral_box_screen.setup(_find_astral_roster())
 	grimoire_screen.setup(_find_grimoire())
@@ -226,6 +230,7 @@ func _input(event: InputEvent) -> void:
 			options_screen.visible
 			or developer_formulas_screen.visible
 			or element_chart_screen.visible
+			or synergy_screen.visible
 			or save_slots_screen.visible
 		):
 			_return_to_pause_menu()
@@ -379,6 +384,12 @@ func _on_element_chart_requested() -> void:
 	_sync_pause_state()
 
 
+func _on_synergies_requested() -> void:
+	pause_menu.close()
+	synergy_screen.open()
+	_sync_pause_state()
+
+
 func _on_options_apply_requested() -> void:
 	show_notification("Impostazioni applicate.")
 
@@ -441,6 +452,7 @@ func _return_to_pause_menu() -> void:
 	options_screen.close()
 	developer_formulas_screen.close()
 	element_chart_screen.close()
+	synergy_screen.close()
 	save_slots_screen.close()
 	pause_menu.open(_save_manager != null and _save_manager.has_saves())
 	_sync_pause_state()
@@ -468,6 +480,7 @@ func _close_modal_screens(exception_screen: Control = null) -> void:
 		options_screen,
 		developer_formulas_screen,
 		element_chart_screen,
+		synergy_screen,
 		save_slots_screen,
 		inventory_screen,
 		squad_screen,
@@ -494,6 +507,7 @@ func _sync_pause_state() -> void:
 		or options_screen.visible
 		or developer_formulas_screen.visible
 		or element_chart_screen.visible
+		or synergy_screen.visible
 		or save_slots_screen.visible
 		or inventory_screen.visible
 		or squad_screen.visible
@@ -523,6 +537,7 @@ func _is_pause_subscreen_visible() -> bool:
 		options_screen.visible
 		or developer_formulas_screen.visible
 		or element_chart_screen.visible
+		or synergy_screen.visible
 		or save_slots_screen.visible
 	)
 

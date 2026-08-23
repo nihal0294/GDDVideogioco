@@ -8,6 +8,7 @@ signal move_learned(move: AstralMoveDefinition)
 signal move_learning_requested(move: AstralMoveDefinition)
 signal evolution_available()
 signal evolved(previous_definition: AstralDefinition, new_definition: AstralDefinition)
+signal affinity_changed(current_affinity: int)
 
 enum Sex {
 	MALE,
@@ -18,6 +19,10 @@ const MAX_MOVE_COUNT: int = 4
 const MAX_LEVEL: int = 100
 const EXPERIENCE_SAVE_FORMAT: int = 2
 const SHINY_ODDS: int = 10000
+const MIN_AFFINITY: int = -100
+const MAX_AFFINITY: int = 100
+const DEFAULT_AFFINITY: int = 0
+const BATTLE_PARTICIPATION_AFFINITY_GAIN: int = 1
 
 @export var definition: AstralDefinition
 @export_range(1, 100, 1) var level: int = 1
@@ -25,6 +30,13 @@ const SHINY_ODDS: int = 10000
 @export_range(0, 9999999, 1) var experience: int = 0
 @export_enum("Maschio", "Femmina") var sex: int = Sex.MALE
 @export var is_shiny: bool = false
+@export_range(-100, 100, 1) var affinity: int = DEFAULT_AFFINITY:
+	set(value):
+		var normalized := clampi(value, MIN_AFFINITY, MAX_AFFINITY)
+		if affinity == normalized:
+			return
+		affinity = normalized
+		affinity_changed.emit(affinity)
 @export_group("Soul Core")
 @export_range(0, 5, 1) var health_soul_core: int = 0
 @export_range(0, 5, 1) var attack_soul_core: int = 0
@@ -48,6 +60,7 @@ func setup(
 ) -> void:
 	definition = source_definition
 	is_shiny = false
+	affinity = DEFAULT_AFFINITY
 	_pending_moves.clear()
 	level = clampi(source_level, 1, MAX_LEVEL)
 	experience = (
@@ -131,6 +144,25 @@ func take_damage(amount: int) -> int:
 
 func is_defeated() -> bool:
 	return definition == null or current_health <= 0
+
+
+func set_affinity(value: int) -> bool:
+	var previous_affinity := affinity
+	affinity = value
+	return affinity != previous_affinity
+
+
+func change_affinity(amount: int) -> int:
+	affinity = affinity + amount
+	return affinity
+
+
+func get_affinity_state_name() -> String:
+	if affinity > 0:
+		return "Positiva"
+	if affinity < 0:
+		return "Negativa"
+	return "Neutrale"
 
 
 func get_experience_to_next_level() -> int:
@@ -299,6 +331,7 @@ func duplicate_runtime() -> AstralInstance:
 	runtime_copy.level = maxi(level, 1)
 	runtime_copy.sex = sex
 	runtime_copy.is_shiny = is_shiny
+	runtime_copy.affinity = affinity
 	runtime_copy.health_soul_core = health_soul_core
 	runtime_copy.attack_soul_core = attack_soul_core
 	runtime_copy.physical_defense_soul_core = physical_defense_soul_core
@@ -333,6 +366,7 @@ func get_save_data() -> Dictionary:
 		"experience_format": EXPERIENCE_SAVE_FORMAT,
 		"sex": sex,
 		"is_shiny": is_shiny,
+		"affinity": affinity,
 		"move_ids": move_ids,
 		"pending_move_ids": pending_move_ids,
 		"soul_core": [
@@ -404,6 +438,11 @@ func load_save_data(
 		)
 	setup(source_definition, saved_level, saved_sex)
 	is_shiny = bool(data.get("is_shiny", false))
+	affinity = clampi(
+		_validated_int(data.get("affinity", DEFAULT_AFFINITY), DEFAULT_AFFINITY),
+		MIN_AFFINITY,
+		MAX_AFFINITY
+	)
 	var saved_health := _validated_int(
 		data.get("current_health", get_max_health()),
 		get_max_health()

@@ -130,6 +130,26 @@
     "mindlith": "non-comune"
   },
 
+  "species_types": {
+    "venomquill": ["acquatico", "tossico"],
+    "flambore": ["bestiale", "caldo"],
+    "pyrobore": ["bestiale", "caldo"],
+    "fortessbore": ["bestiale", "sintetico"],
+    "vorix": ["anfibio", "acquatico"],
+    "saurolix": ["anfibio", "dinosauro"],
+    "phrynolix": ["dinosauro", "bestiale"],
+    "panthor": ["acquatico", "bestiale"],
+    "sharkra": ["acquatico", "bestiale"],
+    "fangoras": ["oscuro", "etereo"],
+    "silphy": ["aero", "fatato"],
+    "airdon": ["aero", "bestiale"],
+    "eldrakans": ["aero", "freddo"],
+    "pandalith": ["bestiale", "cristallo"],
+    "aikilith": ["combattente", "caldo"],
+    "frostalith": ["freddo", "sintetico"],
+    "mindlith": ["natura", "etereo"]
+  },
+
   "species": [
     {"id":"venomquill","name":"Venomquill","species":"Ornitorinco","description":"Attaccante magico resistente che accumula tossine nello sperone.","elements":["veleno"],"stats":[110,20,80,110,115,55],"experience_yield":49,"color":"8657b8","model":"res://data/astrals/platypus/platypus_1.glb","model_rotation":[0,-90,5],"learnset":[[5,"acrid_spit"],[5,"spur_rake"],[12,"caustic_mist"],[22,"toxin_current"],[34,"noxious_surge"],[48,"calcar_injection"],[67,"venom_reservoir"],[88,"neurotoxic_flood"]]},
 

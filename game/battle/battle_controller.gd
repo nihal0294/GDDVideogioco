@@ -2,6 +2,7 @@ class_name BattleController
 extends Node
 
 signal battle_finished(outcome: StringName, captured_astral: AstralInstance)
+signal fossil_revival_completed
 
 const PRESENTATION := preload("res://game/astrals/astral_presentation.gd")
 
@@ -13,6 +14,7 @@ enum BattleState {
 	ITEMS,
 	ASTRALS,
 	FORCED_SWITCH,
+	FOSSIL_REVIVE,
 	RESOLVING,
 	FINISHED,
 }
@@ -59,6 +61,11 @@ var _move_ready_turns: Dictionary = {}
 var _damage_random := RandomNumberGenerator.new()
 var _trainer_battle: bool = false
 var _opponent_name: String = ""
+var _battle_participants: Array[AstralInstance] = []
+var _synergies := BattleSynergyRuntime.new()
+var _synergy_intro_messages: PackedStringArray = []
+var _wild_acted_first_this_round: bool = false
+var _pending_action_message: String = ""
 
 
 func _ready() -> void:
@@ -79,6 +86,7 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
+	_synergies.finish_battle()
 	if is_instance_valid(_previous_camera):
 		_previous_camera.make_current()
 
@@ -98,6 +106,8 @@ func setup(
 		else null
 	)
 	_select_initial_usable_astral()
+	_battle_participants.clear()
+	_register_battle_participant(_player_astral)
 
 	if wild_definition != null:
 		_wild_astral = AstralInstance.new()
@@ -123,12 +133,19 @@ func setup(
 	_wild_ko_experience_awarded = false
 	_player_turn_index = 1
 	_wild_turn_index = 1
+	_wild_acted_first_this_round = false
+	_pending_action_message = ""
 	_move_ready_turns.clear()
 	if encounter_random != null:
 		_damage_random = encounter_random
 	else:
 		_damage_random = RandomNumberGenerator.new()
 		_damage_random.randomize()
+	_synergies.setup(_roster, _damage_random)
+	_synergy_intro_messages = _synergies.begin_battle()
+	_synergy_intro_messages.append_array(
+		_synergies.on_enter_field(_player_astral)
+	)
 	_apply_astral_visual(player_visual, _player_astral)
 	_apply_astral_visual(wild_visual, _wild_astral)
 	_refresh_status()
@@ -163,6 +180,10 @@ func begin() -> void:
 	await _play_entry_animations()
 	if _state != BattleState.INTRO:
 		return
+	if not _synergy_intro_messages.is_empty():
+		await _show_synergy_messages(_synergy_intro_messages)
+		if _state != BattleState.INTRO:
+			return
 	await _wait_for_action()
 	if _state == BattleState.INTRO:
 		_show_commands()
@@ -181,25 +202,65 @@ func choose_fight() -> void:
 func choose_move(move_index: int) -> void:
 	if _state != BattleState.MOVES or _player_astral == null:
 		return
-	var move: AstralMoveDefinition = null
-	move = _player_astral.get_move(move_index)
+	var move := _get_battle_move(_player_astral, move_index)
 	if move == null:
 		message_label.text = "Questa mossa non e disponibile."
 		_rebuild_move_buttons()
 		return
 	var cooldown_remaining := get_player_move_cooldown_remaining(move_index)
-	if cooldown_remaining > 0:
-		message_label.text = "%s deve attendere ancora %s." % [
-			move.display_name,
-			_format_turn_count(cooldown_remaining),
-		]
+	if not _synergies.can_use_move(_player_astral, move, cooldown_remaining):
+		message_label.text = _synergies.get_move_block_reason(
+			_player_astral,
+			move,
+			cooldown_remaining
+		)
 		_rebuild_move_buttons()
 		return
+	_synergies.consume_cooldown_bypass(_player_astral, cooldown_remaining)
+	var preparation := _synergies.prepare_move(_player_astral, move)
+	move = preparation.get("move") as AstralMoveDefinition
+	if (
+		bool(preparation.get("failed", false))
+		and _synergies.should_retry_failure(_player_astral)
+	):
+		preparation["failed"] = false
+		preparation["self_damage"] = 0
+		preparation["message"] = "%s ritenta l'evento grazie alla sinergia Mitico." % _player_astral.definition.display_name
+	_pending_action_message = (
+		String(preparation.get("message", ""))
+		if not bool(preparation.get("failed", false))
+		else ""
+	)
+	var resolved_index := _get_battle_move_index(_player_astral, move)
+	var has_priority := _synergies.consume_move_priority(
+		_player_astral,
+		_wild_astral,
+		move
+	)
 	_state = BattleState.RESOLVING
 	move_panel.hide()
 	_set_command_buttons_disabled(true)
-	_commit_player_move(move_index)
-	_resolve_player_move(move)
+	var player_acts_first := (
+		has_priority
+		or _synergies.must_act_last(_wild_astral)
+		or _synergies.get_effective_speed(_player_astral)
+		>= _synergies.get_effective_speed(_wild_astral)
+	)
+	_synergies.record_acted_first(_player_astral, player_acts_first)
+	if player_acts_first:
+		if bool(preparation.get("failed", false)):
+			_resolve_failed_player_move(
+				preparation,
+				resolved_index if resolved_index >= 0 else move_index
+			)
+		else:
+			_resolve_player_move(move)
+	else:
+		_resolve_wild_first_then_player(
+			move,
+			preparation if bool(preparation.get("failed", false)) else {},
+			resolved_index if resolved_index >= 0 else move_index
+		)
 
 
 func use_move(move_index: int) -> void:
@@ -295,6 +356,7 @@ func switch_astral(roster_index: int) -> void:
 		message_label.text = "Questo Astral non puo entrare in campo."
 		_rebuild_astral_buttons(was_forced)
 		return
+	var previous_astral := _player_astral
 	if not _roster.set_active_astral(roster_index):
 		message_label.text = "Non e stato possibile cambiare Astral."
 		_rebuild_astral_buttons(was_forced)
@@ -302,7 +364,9 @@ func switch_astral(roster_index: int) -> void:
 
 	if not was_forced:
 		_commit_player_turn()
+	_synergies.on_exit_field(previous_astral)
 	_player_astral = _roster.get_active_astral()
+	_register_battle_participant(_player_astral)
 	_state = BattleState.RESOLVING
 	astral_panel.hide()
 	_apply_astral_visual(player_visual, _player_astral)
@@ -310,6 +374,9 @@ func switch_astral(roster_index: int) -> void:
 	message_label.text = "Entra in campo %s!" % (
 		_player_astral.definition.display_name
 	)
+	var entry_messages := _synergies.on_enter_field(_player_astral)
+	if not entry_messages.is_empty():
+		message_label.text += " " + " ".join(entry_messages)
 	await _wait_for_action()
 	if _state != BattleState.RESOLVING:
 		return
@@ -354,6 +421,21 @@ func get_wild_turn_index() -> int:
 	return _wild_turn_index
 
 
+func get_active_synergy_tier(species_id: StringName) -> int:
+	return _synergies.get_tier(species_id)
+
+
+func get_battle_stat_stage(
+	astral: AstralInstance,
+	stat_id: StringName
+) -> int:
+	return _synergies.get_stat_stage(astral, stat_id)
+
+
+func get_battle_statuses(astral: AstralInstance) -> PackedStringArray:
+	return _synergies.get_status_names(astral)
+
+
 func get_player_move_cooldown_remaining(move_index: int) -> int:
 	return _get_move_cooldown_remaining(
 		_player_astral,
@@ -395,29 +477,114 @@ func _resolve_player_move(move: AstralMoveDefinition) -> void:
 		or _wild_astral == null
 	):
 		return
+	var move_index := _get_battle_move_index(_player_astral, move)
+	if move_index >= 0:
+		_commit_player_move(move_index)
 	await _play_attack_animation(player_visual, wild_visual)
 	if _state != BattleState.RESOLVING:
 		return
-	var damage_result := BattleMath.roll_damage(
+	var resolution := _apply_damage_hits(
 		_player_astral,
 		_wild_astral,
-		move,
-		_damage_random
+		move
 	)
-	var applied_damage := _wild_astral.take_damage(damage_result.damage)
+	var applied_damage := int(resolution.get("damage", 0))
 	message_label.text = "%s usa %s e infligge %d danni." % [
 		_player_astral.definition.display_name,
 		move.display_name,
 		applied_damage,
 	]
-	if damage_result.is_critical_hit:
+	if bool(resolution.get("critical", false)):
 		message_label.text += " Brutto colpo!"
+	if not _pending_action_message.is_empty():
+		message_label.text += " " + _pending_action_message
+		_pending_action_message = ""
+	_append_resolution_messages(resolution)
+	var recoil := _synergies.on_move_used(_player_astral, move)
+	if recoil > 0:
+		var applied_recoil := _player_astral.take_damage(recoil)
+		message_label.text += " Il Surriscaldamento infligge %d danni a %s." % [applied_recoil, _player_astral.definition.display_name]
+		if _synergies.try_survive_knockout(_player_astral):
+			message_label.text += " La sinergia Dinosauro lo mantiene a 1 HP."
+	if not _wild_astral.is_defeated():
+		var bonus_move := resolution.get("bonus_move") as AstralMoveDefinition
+		if bonus_move != null:
+			await _play_attack_animation(player_visual, wild_visual)
+			var bonus_resolution := _apply_damage_hits(_player_astral, _wild_astral, bonus_move, 0.5, false)
+			message_label.text += " Combattente usa %s e infligge %d danni aggiuntivi." % [bonus_move.display_name, int(bonus_resolution.get("damage", 0))]
+			_append_resolution_messages(bonus_resolution)
+	if not _wild_astral.is_defeated() and bool(resolution.get("repeat_move", false)):
+		await _play_attack_animation(player_visual, wild_visual)
+		var repeat_resolution := _apply_damage_hits(_player_astral, _wild_astral, move, 1.0, false)
+		message_label.text += " Drago ripete %s e infligge %d danni." % [move.display_name, int(repeat_resolution.get("damage", 0))]
+		_append_resolution_messages(repeat_resolution)
 	_refresh_status()
 	await _wait_for_action()
 	if _state != BattleState.RESOLVING:
 		return
 	if _wild_astral.is_defeated():
+		var knockout_messages := _synergies.on_knockout(_player_astral, _wild_astral, move)
+		if not knockout_messages.is_empty():
+			await _show_synergy_messages(knockout_messages)
+		_synergies.consume_inherited_move(_player_astral, true)
 		await _resolve_wild_ko()
+		return
+	_synergies.consume_inherited_move(_player_astral, false)
+	if _player_astral.is_defeated():
+		if _wild_acted_first_this_round:
+			_wild_acted_first_this_round = false
+			await _complete_round()
+		await _handle_player_knockout()
+		return
+	if _wild_acted_first_this_round:
+		_wild_acted_first_this_round = false
+		await _complete_round()
+		if _wild_astral.is_defeated():
+			_synergies.on_knockout(_player_astral, _wild_astral, move)
+			await _resolve_wild_ko()
+		elif _player_astral.is_defeated():
+			await _handle_player_knockout()
+		else:
+			_show_commands()
+		return
+	await _resolve_wild_counterattack()
+
+
+func _resolve_failed_player_move(
+	preparation: Dictionary,
+	move_index: int
+) -> void:
+	var move := preparation.get("move") as AstralMoveDefinition
+	if move_index >= 0:
+		_commit_player_move(move_index)
+	var self_damage := int(preparation.get("self_damage", 0))
+	if self_damage > 0:
+		_player_astral.take_damage(self_damage)
+	if move != null:
+		var recoil := _synergies.on_move_used(_player_astral, move)
+		if recoil > 0:
+			_player_astral.take_damage(recoil)
+	message_label.text = String(preparation.get("message", "La mossa fallisce."))
+	_pending_action_message = ""
+	if _synergies.try_survive_knockout(_player_astral):
+		message_label.text += " La sinergia Dinosauro lo mantiene a 1 HP."
+	_refresh_status()
+	await _wait_for_action()
+	if _player_astral.is_defeated():
+		if _wild_acted_first_this_round:
+			_wild_acted_first_this_round = false
+			await _complete_round()
+		await _handle_player_knockout()
+		return
+	if _wild_acted_first_this_round:
+		_wild_acted_first_this_round = false
+		await _complete_round()
+		if _wild_astral.is_defeated():
+			await _resolve_wild_ko()
+		elif _player_astral.is_defeated():
+			await _handle_player_knockout()
+		else:
+			_show_commands()
 		return
 	await _resolve_wild_counterattack()
 
@@ -453,56 +620,177 @@ func _resolve_wild_ko() -> void:
 		_finish_battle(&"victory")
 
 
+func _resolve_wild_first_then_player(
+	player_move: AstralMoveDefinition,
+	failed_preparation: Dictionary = {},
+	player_move_index: int = -1
+) -> void:
+	if _state != BattleState.RESOLVING:
+		return
+	var wild_move_index := _get_next_wild_move_index()
+	var wild_move := _get_battle_move(_wild_astral, wild_move_index)
+	if wild_move == null:
+		_commit_wild_turn()
+		await _resolve_pending_player_action(
+			player_move,
+			failed_preparation,
+			player_move_index
+		)
+		return
+	var preparation := _synergies.prepare_move(_wild_astral, wild_move)
+	wild_move = preparation.get("move") as AstralMoveDefinition
+	var resolved_index := _get_battle_move_index(_wild_astral, wild_move)
+	_commit_wild_move(
+		resolved_index if resolved_index >= 0 else wild_move_index
+	)
+	if bool(preparation.get("failed", false)):
+		var self_damage := int(preparation.get("self_damage", 0))
+		if self_damage > 0:
+			_wild_astral.take_damage(self_damage)
+		var failed_recoil := _synergies.on_move_used(_wild_astral, wild_move)
+		if failed_recoil > 0:
+			_wild_astral.take_damage(failed_recoil)
+		message_label.text = String(
+			preparation.get("message", "La mossa avversaria fallisce.")
+		)
+		_refresh_status()
+		await _wait_for_action()
+		if _wild_astral.is_defeated():
+			_synergies.on_knockout(_player_astral, _wild_astral, wild_move)
+			await _resolve_wild_ko()
+			return
+		await _resolve_pending_player_action(
+			player_move,
+			failed_preparation,
+			player_move_index
+		)
+		return
+	await _play_attack_animation(wild_visual, player_visual)
+	if _state != BattleState.RESOLVING:
+		return
+	var resolution := _apply_damage_hits(
+		_wild_astral,
+		_player_astral,
+		wild_move
+	)
+	if bool(resolution.get("evaded", false)):
+		message_label.text = "%s usa %s, ma il Velo di %s annulla l'attacco." % [
+			_wild_astral.definition.display_name,
+			wild_move.display_name,
+			_player_astral.definition.display_name,
+		]
+	else:
+		message_label.text = "%s agisce per primo con %s e infligge %d danni." % [
+			_wild_astral.definition.display_name,
+			wild_move.display_name,
+			int(resolution.get("damage", 0)),
+		]
+	_append_resolution_messages(resolution)
+	var recoil := _synergies.on_move_used(_wild_astral, wild_move)
+	if recoil > 0:
+		_wild_astral.take_damage(recoil)
+	_refresh_status()
+	await _wait_for_action()
+	if _wild_astral.is_defeated():
+		_synergies.on_knockout(_player_astral, _wild_astral, wild_move)
+		await _resolve_wild_ko()
+		return
+	if _player_astral.is_defeated():
+		_synergies.on_knockout(_wild_astral, _player_astral, wild_move)
+		await _complete_round()
+		await _handle_player_knockout()
+		return
+	await _resolve_pending_player_action(
+		player_move,
+		failed_preparation,
+		player_move_index
+	)
+
+
+func _resolve_pending_player_action(
+	player_move: AstralMoveDefinition,
+	failed_preparation: Dictionary,
+	player_move_index: int
+) -> void:
+	_wild_acted_first_this_round = true
+	if failed_preparation.is_empty():
+		await _resolve_player_move(player_move)
+	else:
+		await _resolve_failed_player_move(
+			failed_preparation,
+			player_move_index
+		)
+
+
 func _resolve_wild_counterattack() -> void:
 	if _state != BattleState.RESOLVING:
 		return
 	var move_index := _get_next_wild_move_index()
-	var move: AstralMoveDefinition = null
-	if _wild_astral != null and move_index >= 0:
-		move = _wild_astral.get_move(move_index)
+	var move := _get_battle_move(_wild_astral, move_index)
 	if move == null:
 		_commit_wild_turn()
 		message_label.text = "%s attende che le sue mosse si ricarichino." % (
 			_wild_astral.definition.display_name
 		)
 		await _wait_for_action()
-		if _state == BattleState.RESOLVING:
+		await _complete_round()
+		if _wild_astral.is_defeated():
+			await _resolve_wild_ko()
+		elif _player_astral.is_defeated():
+			await _handle_player_knockout()
+		elif _state == BattleState.RESOLVING:
 			_show_commands()
 		return
 
-	_commit_wild_move(move_index)
+	var preparation := _synergies.prepare_move(_wild_astral, move)
+	move = preparation.get("move") as AstralMoveDefinition
+	var resolved_index := _get_battle_move_index(_wild_astral, move)
+	_commit_wild_move(resolved_index if resolved_index >= 0 else move_index)
+	if bool(preparation.get("failed", false)):
+		var self_damage := int(preparation.get("self_damage", 0))
+		if self_damage > 0:
+			_wild_astral.take_damage(self_damage)
+		var failed_recoil := _synergies.on_move_used(_wild_astral, move)
+		if failed_recoil > 0:
+			_wild_astral.take_damage(failed_recoil)
+		message_label.text = String(preparation.get("message", "La mossa avversaria fallisce."))
+		_refresh_status()
+		await _wait_for_action()
+		await _complete_round()
+		if _wild_astral.is_defeated():
+			_synergies.on_knockout(_player_astral, _wild_astral, move)
+			await _resolve_wild_ko()
+		elif _player_astral.is_defeated():
+			await _handle_player_knockout()
+		else:
+			_show_commands()
+		return
 	await _play_attack_animation(wild_visual, player_visual)
 	if _state != BattleState.RESOLVING:
 		return
-	var damage_result := BattleMath.roll_damage(
-		_wild_astral,
-		_player_astral,
-		move,
-		_damage_random
-	)
-	var applied_damage := _player_astral.take_damage(damage_result.damage)
-	message_label.text = "%s usa %s e infligge %d danni." % [
-		_wild_astral.definition.display_name,
-		move.display_name,
-		applied_damage,
-	]
-	if damage_result.is_critical_hit:
-		message_label.text += " Brutto colpo!"
+	var resolution := _apply_damage_hits(_wild_astral, _player_astral, move)
+	if bool(resolution.get("evaded", false)):
+		message_label.text = "%s usa %s, ma il Velo di %s annulla l'attacco." % [_wild_astral.definition.display_name, move.display_name, _player_astral.definition.display_name]
+	else:
+		message_label.text = "%s usa %s e infligge %d danni." % [_wild_astral.definition.display_name, move.display_name, int(resolution.get("damage", 0))]
+		if bool(resolution.get("critical", false)):
+			message_label.text += " Brutto colpo!"
+	_append_resolution_messages(resolution)
+	var recoil := _synergies.on_move_used(_wild_astral, move)
+	if recoil > 0:
+		_wild_astral.take_damage(recoil)
 	_refresh_status()
 	await _wait_for_action()
 	if _state != BattleState.RESOLVING:
 		return
+	await _complete_round()
+	if _wild_astral.is_defeated():
+		_synergies.on_knockout(_player_astral, _wild_astral, move)
+		await _resolve_wild_ko()
+		return
 	if _player_astral.is_defeated():
-		message_label.text = "%s non puo piu combattere." % (
-			_player_astral.definition.display_name
-		)
-		await _wait_for_action()
-		if _state != BattleState.RESOLVING:
-			return
-		if _roster != null and _roster.has_usable_astral(true):
-			_show_astral_choices(true)
-		else:
-			_finish_battle(&"defeat")
+		_synergies.on_knockout(_wild_astral, _player_astral, move)
+		await _handle_player_knockout()
 		return
 	_show_commands()
 
@@ -519,10 +807,207 @@ func _get_next_wild_move_index() -> int:
 		candidate = moves[candidate_index]
 		if candidate == null:
 			continue
-		if get_wild_move_cooldown_remaining(candidate_index) > 0:
+		var cooldown_remaining := get_wild_move_cooldown_remaining(candidate_index)
+		if not _synergies.can_use_move(_wild_astral, candidate, cooldown_remaining):
 			continue
 		_wild_move_index = (candidate_index + 1) % moves.size()
 		return candidate_index
+	return -1
+
+
+func _apply_damage_hits(
+	attacker: AstralInstance,
+	defender: AstralInstance,
+	move: AstralMoveDefinition,
+	power_scale: float = 1.0,
+	track_followups: bool = true
+) -> Dictionary:
+	var result := {
+		"damage": 0,
+		"critical": false,
+		"evaded": false,
+		"messages": PackedStringArray(),
+		"bonus_move": null,
+		"repeat_move": false,
+	}
+	if attacker == null or defender == null or move == null:
+		return result
+	if move.power > 0 and _synergies.should_evade(defender):
+		result["evaded"] = true
+		return result
+	var modifiers := _synergies.get_damage_modifiers(attacker, defender, move)
+	modifiers.modifier_3 *= maxf(power_scale, 0.0)
+	var damage_result := BattleMath.roll_damage(
+		attacker,
+		defender,
+		move,
+		_damage_random,
+		modifiers
+	)
+	if _synergies.should_reroll_critical(defender, damage_result.is_critical_hit):
+		damage_result = BattleMath.roll_damage(
+			attacker,
+			defender,
+			move,
+			_damage_random,
+			modifiers
+		)
+		(result["messages"] as PackedStringArray).append(
+			"La sinergia Mitico ritira il brutto colpo."
+		)
+	result["critical"] = damage_result.is_critical_hit
+	var total_damage := 0
+	var messages := result["messages"] as PackedStringArray
+	for hit_scale: float in _synergies.get_hit_scales(attacker):
+		if defender.is_defeated() or attacker.is_defeated():
+			break
+		var scaled_damage := 0
+		if damage_result.damage > 0:
+			scaled_damage = maxi(1, floori(float(damage_result.damage) * hit_scale))
+		var applied_damage := defender.take_damage(scaled_damage)
+		total_damage += applied_damage
+		if applied_damage > 0:
+			var hit_result := _synergies.on_hit(attacker, defender, move, applied_damage)
+			messages.append_array(hit_result.get("messages", PackedStringArray()) as PackedStringArray)
+			if track_followups:
+				if hit_result.get("bonus_move") is AstralMoveDefinition:
+					result["bonus_move"] = hit_result.get("bonus_move")
+				if bool(hit_result.get("repeat_move", false)):
+					result["repeat_move"] = true
+		if defender.is_defeated() and _synergies.try_survive_knockout(defender):
+			messages.append("La sinergia Dinosauro mantiene %s a 1 HP." % defender.definition.display_name)
+	var element_multiplier := BattleMath.get_element_multiplier(
+		move.element_id,
+		defender.definition
+	)
+	var neutral_damage := total_damage
+	if element_multiplier > 0.0:
+		neutral_damage = maxi(1, roundi(float(total_damage) / element_multiplier))
+	var reflected := _synergies.get_reflected_damage(
+		defender,
+		total_damage,
+		neutral_damage,
+		element_multiplier > 1.0
+	)
+	if reflected > 0:
+		var applied_reflection := attacker.take_damage(reflected)
+		messages.append("Cristallo riflette %d danni a %s." % [applied_reflection, attacker.definition.display_name])
+	result["damage"] = total_damage
+	result["messages"] = messages
+	return result
+
+
+func _append_resolution_messages(resolution: Dictionary) -> void:
+	var messages := resolution.get("messages", PackedStringArray()) as PackedStringArray
+	if not messages.is_empty():
+		message_label.text += " " + " ".join(messages)
+
+
+func _complete_round() -> void:
+	if _state != BattleState.RESOLVING:
+		return
+	var messages := _synergies.end_round(_player_astral, _wild_astral)
+	_refresh_status()
+	if not messages.is_empty():
+		await _show_synergy_messages(messages)
+	var revival_candidates := _synergies.get_fossil_revival_candidates()
+	if not revival_candidates.is_empty():
+		_show_fossil_revival_choices(revival_candidates)
+		await fossil_revival_completed
+
+
+func _show_fossil_revival_choices(
+	candidates: Array[AstralInstance]
+) -> void:
+	_state = BattleState.FOSSIL_REVIVE
+	command_panel.hide()
+	move_panel.hide()
+	item_panel.hide()
+	astral_panel.show()
+	astral_back_button.hide()
+	_clear_dynamic_children(astrals_list)
+	message_label.text = "Scegli l'Astral da riportare in vita con la sinergia Fossile."
+	var first_button: Button = null
+	for astral: AstralInstance in candidates:
+		if astral == null or astral.definition == null:
+			continue
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(0.0, 46.0)
+		button.text = "%s  Lv.%d  [KO → 1/2 HP]" % [
+			PRESENTATION.format_identity(astral),
+			astral.level,
+		]
+		button.pressed.connect(_select_fossil_revival.bind(astral))
+		astrals_list.add_child(button)
+		if first_button == null:
+			first_button = button
+	if first_button != null:
+		first_button.grab_focus()
+
+
+func _select_fossil_revival(astral: AstralInstance) -> void:
+	if _state != BattleState.FOSSIL_REVIVE:
+		return
+	if not _synergies.revive_with_fossil(astral):
+		return
+	astral_panel.hide()
+	_state = BattleState.RESOLVING
+	message_label.text = "La sinergia Fossile riporta in vita %s con %d HP." % [
+		astral.definition.display_name,
+		astral.current_health,
+	]
+	_refresh_status()
+	fossil_revival_completed.emit()
+
+
+func _handle_player_knockout() -> void:
+	if _player_astral == null or not _player_astral.is_defeated():
+		if _state == BattleState.RESOLVING:
+			_show_commands()
+		return
+	message_label.text = "%s non puo piu combattere." % _player_astral.definition.display_name
+	await _wait_for_action()
+	if _state != BattleState.RESOLVING:
+		return
+	if _roster != null and _roster.has_usable_astral(true):
+		_show_astral_choices(true)
+	else:
+		_finish_battle(&"defeat")
+
+
+func _show_synergy_messages(messages: PackedStringArray) -> void:
+	if messages.is_empty():
+		return
+	message_label.text = " ".join(messages)
+	_refresh_status()
+	await _wait_for_action()
+
+
+func _get_battle_move(
+	astral: AstralInstance,
+	move_index: int
+) -> AstralMoveDefinition:
+	if astral == null or move_index < 0:
+		return null
+	var move := astral.get_move(move_index)
+	if move != null:
+		return move
+	if astral == _player_astral and move_index == astral.get_move_count():
+		return _synergies.get_inherited_move(astral)
+	return null
+
+
+func _get_battle_move_index(
+	astral: AstralInstance,
+	move: AstralMoveDefinition
+) -> int:
+	if astral == null or move == null:
+		return -1
+	for move_index: int in astral.get_move_count():
+		if astral.get_move(move_index) == move:
+			return move_index
+	if astral == _player_astral and _synergies.get_inherited_move(astral) == move:
+		return astral.get_move_count()
 	return -1
 
 
@@ -563,6 +1048,7 @@ func _show_commands() -> void:
 		or _state == BattleState.FORCED_SWITCH
 	):
 		return
+	_wild_acted_first_this_round = false
 	_state = BattleState.COMMAND
 	_hide_selection_panels()
 	command_panel.show()
@@ -639,11 +1125,45 @@ func _rebuild_move_buttons() -> void:
 				move.description,
 				_format_turn_count(move.cooldown_turns),
 			]
-			move_button.disabled = cooldown_remaining > 0
+			move_button.disabled = not _synergies.can_use_move(
+				_player_astral,
+				move,
+				cooldown_remaining
+			)
+			var block_reason := _synergies.get_move_block_reason(
+				_player_astral,
+				move,
+				cooldown_remaining
+			)
+			if not block_reason.is_empty():
+				move_button.tooltip_text += "\n" + block_reason
 			move_button.pressed.connect(choose_move.bind(move_index))
 			moves_grid.add_child(move_button)
 			if first_available_button == null and not move_button.disabled:
 				first_available_button = move_button
+		var inherited_move := _synergies.get_inherited_move(_player_astral)
+		if inherited_move != null:
+			has_move_buttons = true
+			var inherited_index := _player_astral.get_move_count()
+			var inherited_cooldown := get_player_move_cooldown_remaining(
+				inherited_index
+			)
+			var inherited_button := Button.new()
+			inherited_button.custom_minimum_size = Vector2(300.0, 54.0)
+			inherited_button.text = "%s  [EREDITATA | POT %d | CD %d]" % [
+				inherited_move.display_name,
+				inherited_move.power,
+				inherited_move.cooldown_turns,
+			]
+			inherited_button.disabled = not _synergies.can_use_move(
+				_player_astral,
+				inherited_move,
+				inherited_cooldown
+			)
+			inherited_button.pressed.connect(choose_move.bind(inherited_index))
+			moves_grid.add_child(inherited_button)
+			if first_available_button == null and not inherited_button.disabled:
+				first_available_button = inherited_button
 	if not has_move_buttons:
 		var empty_label := Label.new()
 		empty_label.text = "Nessuna mossa disponibile."
@@ -690,13 +1210,20 @@ func _mark_move_used(
 ) -> void:
 	if astral == null:
 		return
-	var move: AstralMoveDefinition = null
-	move = astral.get_move(move_index)
+	var move := _get_battle_move(astral, move_index)
 	if move == null:
 		return
+	var cooldown_reduction := _synergies.consume_cooldown_reduction(
+		astral,
+		move
+	)
 	var astral_key := astral.get_instance_id()
 	var ready_turns: Dictionary = _move_ready_turns.get(astral_key, {})
-	ready_turns[move_index] = current_turn + move.cooldown_turns + 1
+	ready_turns[move_index] = (
+		current_turn
+		+ maxi(move.cooldown_turns - cooldown_reduction, 0)
+		+ 1
+	)
 	_move_ready_turns[astral_key] = ready_turns
 
 
@@ -705,7 +1232,7 @@ func _get_move_cooldown_remaining(
 	move_index: int,
 	current_turn: int
 ) -> int:
-	if astral == null or astral.get_move(move_index) == null:
+	if astral == null or _get_battle_move(astral, move_index) == null:
 		return 0
 	var astral_key := astral.get_instance_id()
 	var ready_turns: Dictionary = _move_ready_turns.get(astral_key, {})
@@ -825,6 +1352,9 @@ func _refresh_astral_status(
 		PRESENTATION.format_identity(astral),
 		astral.level,
 	]
+	var statuses := _synergies.get_status_names(astral)
+	if not statuses.is_empty():
+		name_label.text += "  [%s]" % ", ".join(statuses)
 	health_label.text = "HP %d/%d" % [
 		astral.current_health,
 		astral.get_max_health(),
@@ -904,9 +1434,21 @@ func _finish_battle(
 	command_panel.hide()
 	_hide_selection_panels()
 	_set_command_buttons_disabled(true)
+	if outcome != &"fled":
+		for participant: AstralInstance in _battle_participants:
+			if participant != null:
+				participant.change_affinity(
+					AstralInstance.BATTLE_PARTICIPATION_AFFINITY_GAIN
+				)
+	_synergies.finish_battle()
 	if _roster != null:
 		_roster.heal_party_to_full()
 	battle_finished.emit(outcome, captured_astral)
+
+
+func _register_battle_participant(astral: AstralInstance) -> void:
+	if astral != null and not _battle_participants.has(astral):
+		_battle_participants.append(astral)
 
 
 func _on_item_quantity_changed(

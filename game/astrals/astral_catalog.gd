@@ -73,12 +73,13 @@ static func _ensure_loaded() -> void:
 	var data := raw_data as Dictionary
 	_build_moves(data.get("moves", {}) as Dictionary)
 	var rarities := data.get("rarities", {}) as Dictionary
+	var species_types := data.get("species_types", {}) as Dictionary
 	var raw_species: Variant = data.get("species", [])
 	if not (raw_species is Array):
 		return
 	for raw_entry: Variant in raw_species as Array:
 		if raw_entry is Dictionary:
-			_build_definition(raw_entry as Dictionary, rarities)
+			_build_definition(raw_entry as Dictionary, rarities, species_types)
 	_resolve_inheritance(raw_species as Array)
 	_resolve_evolutions(raw_species as Array)
 
@@ -96,6 +97,7 @@ static func _build_moves(raw_moves: Dictionary) -> void:
 		move.element_id = StringName(values.get("element", "neutro"))
 		move.power = maxi(int(values.get("power", 0)), 0)
 		move.cooldown_turns = clampi(int(values.get("cost", 0)), 0, 5)
+		move.is_unique = bool(values.get("unique", false))
 		match String(values.get("class", "physical")):
 			"magical": move.damage_class = AstralMoveDefinition.DamageClass.MAGICAL
 			"status": move.damage_class = AstralMoveDefinition.DamageClass.STATUS
@@ -103,7 +105,11 @@ static func _build_moves(raw_moves: Dictionary) -> void:
 		_moves[move.move_id] = move
 
 
-static func _build_definition(data: Dictionary, rarities: Dictionary) -> void:
+static func _build_definition(
+	data: Dictionary,
+	rarities: Dictionary,
+	species_types: Dictionary
+) -> void:
 	var astral_id := StringName(data.get("id", ""))
 	if astral_id.is_empty():
 		return
@@ -111,6 +117,8 @@ static func _build_definition(data: Dictionary, rarities: Dictionary) -> void:
 	definition.astral_id = astral_id
 	definition.display_name = String(data.get("name", astral_id))
 	definition.species_name = String(data.get("species", "Sconosciuta"))
+	if not definition.set_species_types(species_types.get(String(astral_id), [])):
+		push_error("Categorie specie non valide per %s." % astral_id)
 	definition.description = String(data.get("description", ""))
 	var elements: Array = data.get("elements", []) as Array
 	if not elements.is_empty(): definition.primary_element = StringName(elements[0])

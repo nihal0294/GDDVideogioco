@@ -7,6 +7,13 @@ signal notification_requested(message: String)
 const PRESENTATION := preload("res://game/astrals/astral_presentation.gd")
 
 @onready var astral_list: ItemList = %AstralList
+@onready var details_container: VBoxContainer = %Details
+@onready var details_tabs: TabBar = %DetailsTabs
+@onready var affinity_panel: VBoxContainer = %AffinityPanel
+@onready var affinity_astral_name: Label = %AffinityAstralName
+@onready var affinity_value: Label = %AffinityValue
+@onready var affinity_state: Label = %AffinityState
+@onready var affinity_bar: ProgressBar = %AffinityBar
 @onready var astral_color: ColorRect = %AstralColor
 @onready var portrait_preview: SubViewportContainer = %PortraitPreview
 @onready var portrait_viewport: SubViewport = %PortraitViewport
@@ -15,6 +22,7 @@ const PRESENTATION := preload("res://game/astrals/astral_presentation.gd")
 @onready var lead_badge: Label = %LeadBadge
 @onready var position_label: Label = %PositionLabel
 @onready var rarity_value: Label = %RarityValue
+@onready var species_types_value: Label = %SpeciesTypesValue
 @onready var description_label: Label = %DescriptionLabel
 @onready var level_value: Label = %LevelValue
 @onready var bst_value: Label = %BstValue
@@ -43,11 +51,15 @@ var roster: AstralRoster = null
 var inventory: Inventory = null
 var _astrals: Array[AstralInstance] = []
 var _selected_astral: AstralInstance = null
+var _observed_affinity_astral: AstralInstance = null
 var _move_labels: Array[Label] = []
 
 
 func _ready() -> void:
 	_move_labels = [move_one, move_two, move_three, move_four]
+	details_tabs.add_tab("Statistiche")
+	details_tabs.add_tab("Affinità")
+	details_tabs.tab_changed.connect(_on_details_tab_changed)
 	astral_list.item_selected.connect(_on_astral_selected)
 	astral_list.item_activated.connect(_on_astral_activated)
 	move_up_button.pressed.connect(_on_move_up_pressed)
@@ -57,6 +69,7 @@ func _ready() -> void:
 	evolution_menu.id_pressed.connect(_on_evolution_selected)
 	close_button.pressed.connect(_on_close_pressed)
 	_configure_focus_navigation()
+	_on_details_tab_changed(0)
 	_clear_details()
 
 
@@ -73,6 +86,8 @@ func setup(
 
 func open() -> void:
 	show()
+	details_tabs.current_tab = 0
+	_on_details_tab_changed(0)
 	_refresh_roster()
 	call_deferred("_focus_astral_list")
 
@@ -155,7 +170,7 @@ func _refresh_roster() -> void:
 	if _astrals.is_empty():
 		var empty_index := astral_list.add_item("Nessun Astral nella squadra")
 		astral_list.set_item_disabled(empty_index, true)
-		_selected_astral = null
+		_set_selected_astral(null)
 		_clear_details()
 		return
 
@@ -191,10 +206,10 @@ func _read_astrals() -> Array[AstralInstance]:
 
 func _on_astral_selected(item_index: int) -> void:
 	if item_index < 0 or item_index >= _astrals.size():
-		_selected_astral = null
+		_set_selected_astral(null)
 		_clear_details()
 		return
-	_selected_astral = _astrals[item_index]
+	_set_selected_astral(_astrals[item_index])
 	_show_astral_details(_selected_astral, item_index)
 	_update_reorder_buttons(item_index)
 
@@ -320,6 +335,7 @@ func _show_astral_details(astral: AstralInstance, roster_index: int) -> void:
 	position_label.text = "Posizione in squadra: %d" % (roster_index + 1)
 	rarity_value.text = "Rarità: %s" % definition.get_rarity_name()
 	rarity_value.add_theme_color_override("font_color", definition.get_rarity_color())
+	species_types_value.text = "Specie Sinergia: %s" % definition.get_species_types_text()
 	level_value.text = str(astral.level)
 	bst_value.text = "%d / %d" % [
 		definition.get_base_stat_total(),
@@ -339,6 +355,7 @@ func _show_astral_details(astral: AstralInstance, roster_index: int) -> void:
 	_update_experience(astral, definition)
 	_update_moves(astral, definition)
 	_update_evolution_button(astral)
+	_update_affinity(astral)
 
 	var color_value: Variant = _get_property_value(
 		definition,
@@ -570,6 +587,7 @@ func _clear_details() -> void:
 	position_label.text = "Posizione in squadra: —"
 	rarity_value.text = "Rarità: —"
 	rarity_value.remove_theme_color_override("font_color")
+	species_types_value.text = "Specie Sinergia: —"
 	description_label.text = "Seleziona un Astral per visualizzarne la scheda."
 	level_value.text = "—"
 	bst_value.text = "—"
@@ -592,6 +610,74 @@ func _clear_details() -> void:
 	evolve_button.disabled = true
 	evolve_button.hide()
 	evolve_button.text = "Evoluzione non disponibile"
+	affinity_astral_name.text = "Nessun Astral selezionato"
+	affinity_value.text = "0"
+	affinity_state.text = "Neutrale"
+	affinity_state.remove_theme_color_override("font_color")
+	affinity_value.remove_theme_color_override("font_color")
+	affinity_bar.value = 0.0
+
+
+func _set_selected_astral(astral: AstralInstance) -> void:
+	if (
+		_observed_affinity_astral != null
+		and is_instance_valid(_observed_affinity_astral)
+		and _observed_affinity_astral.affinity_changed.is_connected(
+			_on_selected_affinity_changed
+		)
+	):
+		_observed_affinity_astral.affinity_changed.disconnect(
+			_on_selected_affinity_changed
+		)
+	_selected_astral = astral
+	_observed_affinity_astral = astral
+	if (
+		_observed_affinity_astral != null
+		and not _observed_affinity_astral.affinity_changed.is_connected(
+			_on_selected_affinity_changed
+		)
+	):
+		_observed_affinity_astral.affinity_changed.connect(
+			_on_selected_affinity_changed
+		)
+
+
+func _on_selected_affinity_changed(_current_affinity: int) -> void:
+	_update_affinity(_selected_astral)
+
+
+func _update_affinity(astral: AstralInstance) -> void:
+	if astral == null or astral.definition == null:
+		affinity_astral_name.text = "Nessun Astral selezionato"
+		affinity_value.text = "0"
+		affinity_state.text = "Neutrale"
+		affinity_state.remove_theme_color_override("font_color")
+		affinity_value.remove_theme_color_override("font_color")
+		affinity_bar.value = 0.0
+		return
+	affinity_astral_name.text = PRESENTATION.format_identity(astral)
+	affinity_value.text = (
+		"+%d" % astral.affinity
+		if astral.affinity > 0
+		else str(astral.affinity)
+	)
+	affinity_state.text = astral.get_affinity_state_name()
+	var state_color := Color(0.72, 0.8, 0.88, 1.0)
+	if astral.affinity > 0:
+		state_color = Color(0.38, 0.86, 0.55, 1.0)
+	elif astral.affinity < 0:
+		state_color = Color(0.95, 0.4, 0.36, 1.0)
+	affinity_state.add_theme_color_override("font_color", state_color)
+	affinity_value.add_theme_color_override("font_color", state_color)
+	affinity_bar.value = float(astral.affinity)
+
+
+func _on_details_tab_changed(tab_index: int) -> void:
+	var show_statistics := tab_index == 0
+	for child: Node in details_container.get_children():
+		if child == details_tabs:
+			continue
+		child.visible = affinity_panel == child if not show_statistics else affinity_panel != child
 
 
 func _show_static_portrait(definition: AstralDefinition) -> void:

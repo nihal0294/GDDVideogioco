@@ -21,6 +21,7 @@ class DamageModifiers:
 	var modifier_3: float = 1.0
 	var attack_stat_modifier: float = 1.0
 	var defense_stat_modifier: float = 1.0
+	var neutralize_immunity: bool = false
 
 
 class DamageResult:
@@ -160,8 +161,12 @@ static func calculate_damage_result(
 	result.type_1_multiplier = type_multipliers[0]
 	result.type_2_multiplier = type_multipliers[1]
 	if result.type_1_multiplier <= 0.0 or result.type_2_multiplier <= 0.0:
-		result.damage = 0
-		return result
+		if active_modifiers.neutralize_immunity:
+			result.type_1_multiplier = 1.0
+			result.type_2_multiplier = 1.0
+		else:
+			result.damage = 0
+			return result
 	damage = floori(float(damage) * result.type_1_multiplier)
 	damage = floori(float(damage) * result.type_2_multiplier)
 	damage = floori(float(damage) * maxf(active_modifiers.modifier_3, 0.0))

@@ -14,6 +14,7 @@ enum DamageClass {
 @export var element_id: StringName = &"neutro"
 @export_enum("Fisico", "Magico", "Setup") var damage_class: int = DamageClass.PHYSICAL
 @export_range(0, 5, 1) var cooldown_turns: int = 0
+@export var is_unique: bool = false
 
 
 func get_damage_class_name() -> String:

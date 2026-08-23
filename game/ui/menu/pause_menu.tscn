@@ -80,6 +80,13 @@ layout_mode = 2
 text = "Tabella elementi"
 tooltip_text = "Consulta debolezze e resistenze di tutti gli elementi."
 
+[node name="SynergiesButton" type="Button" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 48)
+layout_mode = 2
+text = "Sinergie"
+tooltip_text = "Consulta le sinergie della squadra."
+
 [node name="SaveButton" type="Button" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 48)

@@ -186,6 +186,31 @@ func has_usable_astral(exclude_active: bool = false) -> bool:
 	return false
 
 
+func add_temporary_party_astral(astral: AstralInstance) -> bool:
+	if (
+		astral == null
+		or astral.definition == null
+		or _astrals.size() >= MAX_PARTY_SIZE
+		or _astrals.has(astral)
+	):
+		return false
+	_astrals.append(astral)
+	roster_changed.emit()
+	return true
+
+
+func remove_temporary_party_astral(astral: AstralInstance) -> bool:
+	var index := _astrals.find(astral)
+	if index < 0:
+		return false
+	var previous_active := get_active_astral()
+	_astrals.remove_at(index)
+	if get_active_astral() != previous_active:
+		active_astral_changed.emit(get_active_astral())
+	roster_changed.emit()
+	return true
+
+
 func move_astral(from_index: int, to_index: int) -> bool:
 	if not _is_valid_index(from_index) or not _is_valid_index(to_index):
 		return false

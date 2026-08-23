@@ -83,6 +83,13 @@ func load_save_data(data: Dictionary) -> void:
 	gift_claimed = bool(data.get("gift_claimed", false))
 
 
+func claim_gift() -> bool:
+	if gift_claimed:
+		return false
+	gift_claimed = true
+	return true
+
+
 func _on_interacted(interactor: Node3D) -> void:
 	var actor := interactor as CharacterBody3D
 	if actor == null or _interacting_actor != null:
@@ -94,7 +101,6 @@ func _on_interacted(interactor: Node3D) -> void:
 	if _interacting_actor != actor:
 		return
 	if florins_gift > 0 and not gift_claimed:
-		gift_claimed = true
 		florins_gift_requested.emit(self, actor, florins_gift)
 
 

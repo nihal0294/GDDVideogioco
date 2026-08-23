@@ -69,8 +69,9 @@ var _pending_action_message: String = ""
 
 
 func _ready() -> void:
-	_previous_camera = get_viewport().get_camera_3d()
-	battle_camera.make_current()
+	if DisplayServer.get_name() != "headless":
+		_previous_camera = get_viewport().get_camera_3d()
+		battle_camera.make_current()
 	fight_button.pressed.connect(choose_fight)
 	items_button.pressed.connect(choose_items)
 	switch_button.pressed.connect(choose_switch)
@@ -150,6 +151,24 @@ func setup(
 	_apply_astral_visual(wild_visual, _wild_astral)
 	_refresh_status()
 	message_label.text = "Preparati allo scontro."
+
+
+func setup_for_session(
+	session: PlayerSession,
+	wild_definition: AstralDefinition,
+	wild_level: int = 1,
+	encounter_random: RandomNumberGenerator = null
+) -> void:
+	if session == null:
+		setup(null, null, wild_definition, wild_level, encounter_random)
+		return
+	setup(
+		session.inventory,
+		session.astral_roster,
+		wild_definition,
+		wild_level,
+		encounter_random
+	)
 
 
 func begin() -> void:

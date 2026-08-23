@@ -19,6 +19,7 @@ var _roster: AstralRoster = null
 var _grimoire: Grimoire = null
 var _profile: PlayerProfile = null
 var _world_map: Node3D = null
+var _storage: SaveStorage = LocalFileSaveStorage.new()
 
 
 func setup(
@@ -37,6 +38,34 @@ func setup(
 	_world_map = world_map
 	_ensure_save_directory()
 	slots_changed.emit()
+
+
+func setup_session(session: PlayerSession, world_map: Node3D) -> void:
+	if session == null:
+		return
+	setup(
+		session.actor,
+		session.inventory,
+		session.astral_roster,
+		session.grimoire,
+		session.profile,
+		world_map
+	)
+
+
+func set_storage(storage: SaveStorage) -> bool:
+	if storage == null:
+		_report_failure("Storage dei salvataggi non valido.")
+		return false
+	_storage = storage
+	var storage_ready := _ensure_save_directory()
+	if storage_ready:
+		slots_changed.emit()
+	return storage_ready
+
+
+func get_storage() -> SaveStorage:
+	return _storage
 
 
 func set_world_map(world_map: Node3D) -> void:
@@ -139,16 +168,15 @@ func create_save(slot_index: int) -> bool:
 		"profile": _profile.get_save_data(),
 		"world": _get_world_save_data(),
 	}
-	var save_file := FileAccess.open(get_slot_path(slot_index), FileAccess.WRITE)
-	if save_file == null:
+	if not _storage.write_text(
+		get_slot_path(slot_index),
+		JSON.stringify(save_data, "\t")
+	):
 		_report_failure(
 			"Impossibile scrivere lo slot %d: errore %d."
-			% [slot_index + 1, FileAccess.get_open_error()]
+			% [slot_index + 1, _storage.get_last_error()]
 		)
 		return false
-	save_file.store_string(JSON.stringify(save_data, "\t"))
-	save_file.flush()
-	save_file.close()
 	save_created.emit(slot_index)
 	slots_changed.emit()
 	return true
@@ -307,18 +335,17 @@ func _normalize_legacy_map_id(map_id: StringName) -> StringName:
 
 func _read_slot_data(slot_index: int, report_errors: bool) -> Dictionary:
 	var path := get_slot_path(slot_index)
-	if path.is_empty() or not FileAccess.file_exists(path):
+	if path.is_empty() or not _storage.file_exists(path):
 		if report_errors:
 			_report_failure("Lo slot %d è vuoto." % (slot_index + 1))
 		return {}
-	var save_file := FileAccess.open(path, FileAccess.READ)
-	if save_file == null:
+	var raw_content := _storage.read_text(path)
+	if raw_content.is_empty() and _storage.get_last_error() != OK:
 		if report_errors:
 			_report_failure("Impossibile leggere lo slot %d." % (slot_index + 1))
 		return {}
 	var json := JSON.new()
-	var parse_error := json.parse(save_file.get_as_text())
-	save_file.close()
+	var parse_error := json.parse(raw_content)
 	if parse_error != OK or not (json.data is Dictionary):
 		if report_errors:
 			_report_failure("Il salvataggio nello slot %d è danneggiato." % (slot_index + 1))
@@ -357,9 +384,7 @@ func _ensure_save_directory() -> bool:
 	if not save_directory.begins_with("user://") or ".." in save_directory:
 		_report_failure("Cartella dei salvataggi non valida.")
 		return false
-	var absolute_path := ProjectSettings.globalize_path(save_directory)
-	var error := DirAccess.make_dir_recursive_absolute(absolute_path)
-	if error != OK and error != ERR_ALREADY_EXISTS:
+	if _storage == null or not _storage.ensure_directory(save_directory):
 		_report_failure("Impossibile creare la cartella dei salvataggi.")
 		return false
 	return true

@@ -81,7 +81,8 @@ func setup(
 	roster: AstralRoster = null,
 	grimoire: Grimoire = null,
 	profile: PlayerProfile = null,
-	save_manager: SaveManager = null
+	save_manager: SaveManager = null,
+	player_session: PlayerSession = null
 ) -> void:
 	inventory_screen.setup(inventory)
 	var resolved_roster: AstralRoster = roster
@@ -95,9 +96,16 @@ func setup(
 		profile if profile != null else _find_player_profile()
 	)
 	var resolved_profile := profile if profile != null else _find_player_profile()
-	shop_screen.setup(inventory, resolved_profile)
+	shop_screen.setup(
+		inventory,
+		resolved_profile,
+		player_session.economy if player_session != null else null
+	)
 	astral_exchange_screen.setup(resolved_roster, resolved_profile)
-	coin_flip_screen.setup(resolved_profile)
+	coin_flip_screen.setup(
+		resolved_profile,
+		player_session.economy if player_session != null else null
+	)
 	set_save_manager(save_manager if save_manager != null else _find_save_manager())
 
 

@@ -12,6 +12,7 @@ signal notification_requested(message: String)
 
 var _inventory: Inventory = null
 var _profile: PlayerProfile = null
+var _economy: PlayerEconomyService = null
 var _selling: bool = false
 
 
@@ -22,10 +23,18 @@ func _ready() -> void:
 	%CloseButton.pressed.connect(func() -> void: close_requested.emit())
 
 
-func setup(inventory: Inventory, profile: PlayerProfile) -> void:
+func setup(
+	inventory: Inventory,
+	profile: PlayerProfile,
+	economy: PlayerEconomyService = null
+) -> void:
 	_disconnect_sources()
 	_inventory = inventory
 	_profile = profile
+	_economy = economy
+	if _economy == null:
+		_economy = PlayerEconomyService.new()
+		_economy.setup(_inventory, _profile)
 	if _inventory != null:
 		_inventory.item_quantity_changed.connect(_on_inventory_changed)
 	if _profile != null:
@@ -102,31 +111,39 @@ func _refresh_details() -> void:
 
 func _on_action_pressed() -> void:
 	var item := _get_selected_definition()
-	if item == null or _inventory == null or _profile == null:
+	if item == null or _economy == null:
 		return
-	if _selling:
-		var price := item.get_sell_price()
-		if _profile.florins > PlayerProfile.MAX_FLORINS - price:
-			notification_requested.emit("Non puoi portare altri Fiorini.")
-			return
-		if _inventory.spend_item(item.item_id, 1) != 1:
-			return
-		_profile.add_florins(price)
-		notification_requested.emit("Hai venduto %s per %d Fiorini." % [
-			item.display_name, price,
-		])
-	else:
-		if not _inventory.can_add_item(item.item_id):
-			notification_requested.emit("Non hai spazio per %s." % item.display_name)
-			return
-		if not _profile.spend_florins(item.buy_price):
-			notification_requested.emit("Non hai abbastanza Fiorini.")
-			return
-		if _inventory.add_item(item.item_id, 1) != 1:
-			_profile.add_florins(item.buy_price)
-			return
-		notification_requested.emit("Hai acquistato %s." % item.display_name)
+	var result := (
+		_economy.request_sale(item.item_id)
+		if _selling
+		else _economy.request_purchase(item.item_id)
+	)
+	_show_operation_result(result, item)
 	_refresh()
+
+
+func _show_operation_result(result: Dictionary, item: ItemDefinition) -> void:
+	var code := StringName(result.get("code", &"mutation_failed"))
+	var price := int(result.get("price", 0))
+	match code:
+		PlayerEconomyService.OK:
+			notification_requested.emit(
+				"Hai venduto %s per %d Fiorini." % [item.display_name, price]
+				if _selling
+				else "Hai acquistato %s." % item.display_name
+			)
+		PlayerEconomyService.INVENTORY_FULL:
+			notification_requested.emit("Non hai spazio per %s." % item.display_name)
+		PlayerEconomyService.NOT_ENOUGH_CURRENCY:
+			notification_requested.emit("Non hai abbastanza Fiorini.")
+		PlayerEconomyService.CURRENCY_FULL:
+			notification_requested.emit("Non puoi portare altri Fiorini.")
+		PlayerEconomyService.NOT_AUTHORITY:
+			notification_requested.emit("L'azione deve essere convalidata dall'autorita di gioco.")
+		PlayerEconomyService.NOT_OWNED:
+			notification_requested.emit("Non possiedi piu questo oggetto.")
+		_:
+			notification_requested.emit("L'operazione non e stata completata.")
 
 
 func _get_selected_definition() -> ItemDefinition:

@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://dvm5wnytkfnen"]
+[gd_scene load_steps=13 format=3 uid="uid://dvm5wnytkfnen"]
 
 [ext_resource type="PackedScene" path="res://game/player/player.tscn" id="1_player"]
 [ext_resource type="PackedScene" path="res://game/world/maps/verdant_valley/verdant_valley.tscn" id="2_world_map"]
@@ -9,6 +9,8 @@
 [ext_resource type="PackedScene" path="res://game/grimoire/grimoire.tscn" id="7_grimoire"]
 [ext_resource type="PackedScene" path="res://game/player/player_profile.tscn" id="8_profile"]
 [ext_resource type="PackedScene" path="res://game/save/save_manager.tscn" id="9_save_manager"]
+[ext_resource type="Script" path="res://game/session/runtime_context.gd" id="10_runtime"]
+[ext_resource type="Script" path="res://game/session/player_session.gd" id="11_session"]
 
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
@@ -19,6 +21,12 @@ ambient_light_energy = 0.65
 
 [node name="Main" type="Node3D"]
 script = ExtResource("3_main")
+
+[node name="RuntimeContext" type="Node" parent="."]
+script = ExtResource("10_runtime")
+
+[node name="LocalPlayerSession" type="Node" parent="."]
+script = ExtResource("11_session")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_main")

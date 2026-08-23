@@ -12,4 +12,4 @@ extends Resource
 
 
 func get_sell_price() -> int:
-	return maxi(buy_price / 10, 1) if buy_price > 0 else 0
+	return maxi(int(float(buy_price) / 10.0), 1) if buy_price > 0 else 0

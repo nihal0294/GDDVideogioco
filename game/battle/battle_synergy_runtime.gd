@@ -469,7 +469,7 @@ func try_survive_knockout(astral: AstralInstance) -> bool:
 func on_knockout(
 	attacker: AstralInstance,
 	defeated: AstralInstance,
-	move: AstralMoveDefinition
+	_move: AstralMoveDefinition
 ) -> PackedStringArray:
 	var messages: PackedStringArray = []
 	if attacker != null:

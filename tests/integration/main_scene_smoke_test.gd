@@ -522,7 +522,33 @@ func _test_options_and_save_system(main: Node) -> void:
 		_fail("Primo slot di salvataggio mancante.")
 		_cleanup_test_save_directory(test_directory)
 		return
+	var primary_action_button := game_ui.save_slots_screen.get_node_or_null(
+		"%PrimaryActionButton"
+	) as Button
+	var action_confirmation := game_ui.save_slots_screen.get_node_or_null(
+		"ActionConfirmation"
+	) as ConfirmationDialog
+	_expect(
+		primary_action_button != null and primary_action_button.disabled,
+		"Salva è attivo senza alcuno slot selezionato."
+	)
 	first_slot.emit_signal("pressed")
+	await process_frame
+	_expect(
+		primary_action_button != null and not primary_action_button.disabled,
+		"Salva non si attiva selezionando uno slot."
+	)
+	_expect(
+		not FileAccess.file_exists(save_manager.get_slot_path(0)),
+		"Selezionare uno slot non deve salvare immediatamente."
+	)
+	primary_action_button.emit_signal("pressed")
+	await process_frame
+	_expect(
+		action_confirmation != null and action_confirmation.visible,
+		"La conferma di salvataggio non appare."
+	)
+	action_confirmation.confirmed.emit()
 	await process_frame
 	_expect(FileAccess.file_exists(save_manager.get_slot_path(0)), "Lo slot 1 non è persistito su disco.")
 	_expect(save_manager.has_saves(), "SaveManager non rileva lo slot appena creato.")
@@ -595,6 +621,43 @@ func _test_options_and_save_system(main: Node) -> void:
 	player.global_position = Vector3(24.0, 8.0, 15.0)
 	_expect(save_manager.create_save(1), "Creazione del secondo slot fallita.")
 	player.global_position = Vector3.ZERO
+
+	_expect(
+		save_manager.create_save(2),
+		"Creazione del terzo slot per il test di eliminazione fallita."
+	)
+	var delete_slot_button := game_ui.save_slots_screen.get_node_or_null(
+		"%Slot03Button"
+	) as Button
+	var delete_button := game_ui.save_slots_screen.get_node_or_null("%DeleteButton") as Button
+	if delete_slot_button == null or delete_button == null or action_confirmation == null:
+		_fail("Pulsanti di eliminazione slot mancanti.")
+	else:
+		_expect(delete_button.disabled, "Elimina è attivo senza alcuno slot selezionato.")
+		delete_slot_button.emit_signal("pressed")
+		await process_frame
+		_expect(
+			not delete_button.disabled,
+			"Elimina non si attiva selezionando uno slot occupato."
+		)
+		delete_button.emit_signal("pressed")
+		await process_frame
+		_expect(action_confirmation.visible, "La conferma di eliminazione non appare.")
+		action_confirmation.confirmed.emit()
+		await process_frame
+		_expect(
+			not FileAccess.file_exists(save_manager.get_slot_path(2)),
+			"Lo slot 3 non è stato eliminato."
+		)
+		var occupied_after_delete := 0
+		for summary: Dictionary in save_manager.get_slot_summaries():
+			if bool(summary.get("occupied", false)):
+				occupied_after_delete += 1
+		_expect(
+			occupied_after_delete == 2,
+			"L'eliminazione dello slot non aggiorna correttamente il conteggio degli slot occupati."
+		)
+
 	var slots_back := game_ui.save_slots_screen.get_node_or_null("%BackButton") as Button
 	if slots_back != null:
 		slots_back.emit_signal("pressed")

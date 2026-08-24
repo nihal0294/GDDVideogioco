@@ -2,6 +2,7 @@ class_name SaveManager
 extends Node
 
 signal save_created(slot_index: int)
+signal save_deleted(slot_index: int)
 signal game_loaded(slot_index: int)
 signal operation_failed(message: String)
 signal slots_changed
@@ -207,6 +208,25 @@ func load_save(slot_index: int) -> bool:
 	_apply_player_save_data(data.get("player", {}) as Dictionary)
 	_apply_world_save_data(world_data)
 	game_loaded.emit(slot_index)
+	return true
+
+
+func delete_save(slot_index: int) -> bool:
+	if not _is_valid_slot(slot_index):
+		_report_failure("Slot non valido.")
+		return false
+	var path := get_slot_path(slot_index)
+	if not _storage.file_exists(path):
+		_report_failure("Lo slot %d è già vuoto." % (slot_index + 1))
+		return false
+	if not _storage.delete_file(path):
+		_report_failure(
+			"Impossibile eliminare lo slot %d: errore %d."
+			% [slot_index + 1, _storage.get_last_error()]
+		)
+		return false
+	save_deleted.emit(slot_index)
+	slots_changed.emit()
 	return true
 
 

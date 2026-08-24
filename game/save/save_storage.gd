@@ -18,6 +18,10 @@ func read_text(_path: String) -> String:
 	return ""
 
 
+func delete_file(_path: String) -> bool:
+	return false
+
+
 func get_last_error() -> Error:
 	return ERR_UNAVAILABLE
 

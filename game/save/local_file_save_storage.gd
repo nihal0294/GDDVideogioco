@@ -40,6 +40,10 @@ func read_text(path: String) -> String:
 	return content
 
 
+func delete_file(path: String) -> bool:
+	_last_error = DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	return _last_error == OK
+
+
 func get_last_error() -> Error:
 	return _last_error
-

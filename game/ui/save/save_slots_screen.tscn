@@ -1,6 +1,6 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=3 format=3 uid="uid://c3yeu06747hk7"]
 
-[ext_resource type="Script" path="res://game/ui/save/save_slots_screen.gd" id="1_slots"]
+[ext_resource type="Script" uid="uid://knp7sip6iehg" path="res://game/ui/save/save_slots_screen.gd" id="1_slots"]
 
 [sub_resource type="StyleBoxFlat" id="Style_panel"]
 bg_color = Color(0.055, 0.075, 0.11, 0.98)
@@ -22,7 +22,6 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 0
 script = ExtResource("1_slots")
 
 [node name="Backdrop" type="ColorRect" parent="."]
@@ -106,70 +105,90 @@ theme_override_constants/separation = 8
 unique_name_in_owner = true
 custom_minimum_size = Vector2(790, 66)
 layout_mode = 2
-text = "SLOT 01\nVuoto"
+toggle_mode = true
+text = "SLOT 01
+Vuoto"
 alignment = 0
 
 [node name="Slot02Button" type="Button" parent="Center/Panel/OuterMargin/Layout/SlotsScroll/Slots"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(790, 66)
 layout_mode = 2
-text = "SLOT 02\nVuoto"
+toggle_mode = true
+text = "SLOT 02
+Vuoto"
 alignment = 0
 
 [node name="Slot03Button" type="Button" parent="Center/Panel/OuterMargin/Layout/SlotsScroll/Slots"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(790, 66)
 layout_mode = 2
-text = "SLOT 03\nVuoto"
+toggle_mode = true
+text = "SLOT 03
+Vuoto"
 alignment = 0
 
 [node name="Slot04Button" type="Button" parent="Center/Panel/OuterMargin/Layout/SlotsScroll/Slots"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(790, 66)
 layout_mode = 2
-text = "SLOT 04\nVuoto"
+toggle_mode = true
+text = "SLOT 04
+Vuoto"
 alignment = 0
 
 [node name="Slot05Button" type="Button" parent="Center/Panel/OuterMargin/Layout/SlotsScroll/Slots"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(790, 66)
 layout_mode = 2
-text = "SLOT 05\nVuoto"
+toggle_mode = true
+text = "SLOT 05
+Vuoto"
 alignment = 0
 
 [node name="Slot06Button" type="Button" parent="Center/Panel/OuterMargin/Layout/SlotsScroll/Slots"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(790, 66)
 layout_mode = 2
-text = "SLOT 06\nVuoto"
+toggle_mode = true
+text = "SLOT 06
+Vuoto"
 alignment = 0
 
 [node name="Slot07Button" type="Button" parent="Center/Panel/OuterMargin/Layout/SlotsScroll/Slots"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(790, 66)
 layout_mode = 2
-text = "SLOT 07\nVuoto"
+toggle_mode = true
+text = "SLOT 07
+Vuoto"
 alignment = 0
 
 [node name="Slot08Button" type="Button" parent="Center/Panel/OuterMargin/Layout/SlotsScroll/Slots"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(790, 66)
 layout_mode = 2
-text = "SLOT 08\nVuoto"
+toggle_mode = true
+text = "SLOT 08
+Vuoto"
 alignment = 0
 
 [node name="Slot09Button" type="Button" parent="Center/Panel/OuterMargin/Layout/SlotsScroll/Slots"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(790, 66)
 layout_mode = 2
-text = "SLOT 09\nVuoto"
+toggle_mode = true
+text = "SLOT 09
+Vuoto"
 alignment = 0
 
 [node name="Slot10Button" type="Button" parent="Center/Panel/OuterMargin/Layout/SlotsScroll/Slots"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(790, 66)
 layout_mode = 2
-text = "SLOT 10\nVuoto"
+toggle_mode = true
+text = "SLOT 10
+Vuoto"
 alignment = 0
 
 [node name="FooterSeparator" type="HSeparator" parent="Center/Panel/OuterMargin/Layout"]
@@ -177,16 +196,37 @@ layout_mode = 2
 
 [node name="Footer" type="HBoxContainer" parent="Center/Panel/OuterMargin/Layout"]
 layout_mode = 2
+theme_override_constants/separation = 12
 
 [node name="FooterHint" type="Label" parent="Center/Panel/OuterMargin/Layout/Footer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.55, 0.65, 0.72, 1)
-text = "Invio: seleziona slot"
+text = "Invio: seleziona, poi conferma"
 vertical_alignment = 1
+
+[node name="DeleteButton" type="Button" parent="Center/Panel/OuterMargin/Layout/Footer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(140, 46)
+layout_mode = 2
+disabled = true
+text = "Elimina"
+
+[node name="PrimaryActionButton" type="Button" parent="Center/Panel/OuterMargin/Layout/Footer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(140, 46)
+layout_mode = 2
+disabled = true
+text = "Carica"
 
 [node name="BackButton" type="Button" parent="Center/Panel/OuterMargin/Layout/Footer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 46)
 layout_mode = 2
 text = "Indietro"
+
+[node name="ActionConfirmation" type="ConfirmationDialog" parent="."]
+title = "Conferma"
+ok_button_text = "Conferma"
+cancel_button_text = "Annulla"
+dialog_text = "Confermi questa azione?"

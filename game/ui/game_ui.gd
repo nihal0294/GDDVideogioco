@@ -43,6 +43,7 @@ func _ready() -> void:
 	synergy_screen.back_requested.connect(_return_to_pause_menu)
 	save_slots_screen.save_slot_requested.connect(_on_save_slot_requested)
 	save_slots_screen.load_slot_requested.connect(_on_load_slot_requested)
+	save_slots_screen.delete_slot_requested.connect(_on_delete_slot_requested)
 	save_slots_screen.back_requested.connect(_return_to_pause_menu)
 	inventory_screen.notification_requested.connect(show_notification)
 	squad_screen.close_requested.connect(_on_squad_close_requested)
@@ -454,6 +455,16 @@ func _on_load_slot_requested(slot_index: int) -> void:
 	_close_modal_screens()
 	_sync_pause_state()
 	show_notification("Salvataggio %d caricato." % (slot_index + 1))
+
+
+func _on_delete_slot_requested(slot_index: int) -> void:
+	if _save_manager == null or not _save_manager.delete_save(slot_index):
+		if _save_manager == null:
+			show_notification("Il sistema di salvataggio non è disponibile.")
+		return
+	save_slots_screen.refresh_slots(_save_manager.get_slot_summaries())
+	_refresh_save_availability()
+	show_notification("Salvataggio eliminato dallo slot %d." % (slot_index + 1))
 
 
 func _return_to_pause_menu() -> void:

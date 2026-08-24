@@ -104,3 +104,9 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 48)
 layout_mode = 2
 text = "Esci dal gioco"
+
+[node name="ExitConfirmation" type="ConfirmationDialog" parent="."]
+title = "Conferma uscita"
+ok_button_text = "Esci"
+cancel_button_text = "Annulla"
+dialog_text = "Uscire dal gioco? I progressi non salvati andranno persi."

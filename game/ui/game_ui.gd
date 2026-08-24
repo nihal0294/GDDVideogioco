@@ -45,6 +45,7 @@ func _ready() -> void:
 	save_slots_screen.load_slot_requested.connect(_on_load_slot_requested)
 	save_slots_screen.delete_slot_requested.connect(_on_delete_slot_requested)
 	save_slots_screen.back_requested.connect(_return_to_pause_menu)
+	pause_menu.exit_requested.connect(_on_exit_requested)
 	inventory_screen.notification_requested.connect(show_notification)
 	squad_screen.close_requested.connect(_on_squad_close_requested)
 	squad_screen.notification_requested.connect(show_notification)
@@ -425,6 +426,10 @@ func _on_load_requested() -> void:
 		_save_manager.get_slot_summaries()
 	)
 	_sync_pause_state()
+
+
+func _on_exit_requested() -> void:
+	get_tree().quit()
 
 
 func _on_continue_requested() -> void:

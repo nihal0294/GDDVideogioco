@@ -18,6 +18,7 @@ signal exit_requested
 @onready var save_button: Button = %SaveButton
 @onready var load_button: Button = %LoadButton
 @onready var exit_button: Button = %ExitButton
+@onready var exit_confirmation: ConfirmationDialog = $ExitConfirmation
 
 
 func _ready() -> void:
@@ -29,6 +30,7 @@ func _ready() -> void:
 	save_button.pressed.connect(_on_save_pressed)
 	load_button.pressed.connect(_on_load_pressed)
 	exit_button.pressed.connect(_on_exit_pressed)
+	exit_confirmation.confirmed.connect(_confirm_exit)
 	_configure_focus_navigation()
 
 
@@ -42,6 +44,7 @@ func close() -> void:
 	var focus_owner := get_viewport().gui_get_focus_owner()
 	if focus_owner != null and is_ancestor_of(focus_owner):
 		focus_owner.release_focus()
+	exit_confirmation.hide()
 	hide()
 
 
@@ -89,6 +92,10 @@ func _on_load_pressed() -> void:
 
 
 func _on_exit_pressed() -> void:
+	exit_confirmation.popup_centered()
+
+
+func _confirm_exit() -> void:
 	exit_requested.emit()
 
 

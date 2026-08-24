@@ -303,6 +303,10 @@ func _test_options_and_save_system(main: Node) -> void:
 	) as Button
 	var save_button := game_ui.pause_menu.get_node_or_null("%SaveButton") as Button
 	var load_button := game_ui.pause_menu.get_node_or_null("%LoadButton") as Button
+	var exit_button := game_ui.pause_menu.get_node_or_null("%ExitButton") as Button
+	var exit_confirmation := game_ui.pause_menu.get_node_or_null(
+		"ExitConfirmation"
+	) as ConfirmationDialog
 	_expect(
 		continue_button != null and continue_button.disabled,
 		"Continua non è disabilitato senza salvataggi."
@@ -316,10 +320,22 @@ func _test_options_and_save_system(main: Node) -> void:
 		or formulas_button == null
 		or element_chart_button == null
 		or save_button == null
+		or exit_button == null
+		or exit_confirmation == null
 	):
-		_fail("Pulsanti Opzioni, Formule, Elementi o Salva mancanti dal menu.")
+		_fail("Pulsanti Opzioni, Formule, Elementi, Salva o Esci mancanti dal menu.")
 		_cleanup_test_save_directory(test_directory)
 		return
+
+	exit_button.emit_signal("pressed")
+	await process_frame
+	_expect(exit_confirmation.visible, "Esci non mostra la conferma di uscita.")
+	exit_confirmation.hide()
+	await process_frame
+	_expect(
+		game_ui.pause_menu.visible and paused,
+		"Annullare l'uscita non deve chiudere il menu di pausa."
+	)
 
 	options_button.emit_signal("pressed")
 	await process_frame

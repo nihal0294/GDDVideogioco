@@ -1,0 +1,130 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://test_hub/maps/astrals_roster/astrals_roster.gd" id="1"]
+[ext_resource type="PackedScene" path="res://game/world/buildings/building_door.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://game/world/buildings/facility_interactable.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://test_hub/shared/astral_picker_screen.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://game/ui/notifications/notification_toast.tscn" id="5"]
+
+[sub_resource type="StandardMaterial3D" id="floor_mat"]
+albedo_color = Color(0.18, 0.24, 0.32, 1)
+roughness = 0.86
+
+[sub_resource type="StandardMaterial3D" id="wall_mat"]
+albedo_color = Color(0.42, 0.5, 0.6, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="floor_mesh"]
+material = SubResource("floor_mat")
+size = Vector3(1, 1, 1)
+
+[sub_resource type="BoxMesh" id="wall_mesh"]
+material = SubResource("wall_mat")
+size = Vector3(1, 1, 1)
+
+[sub_resource type="BoxShape3D" id="box_shape"]
+size = Vector3(1, 1, 1)
+
+[node name="TestHubAstralsRosterRoom" type="Node3D"]
+script = ExtResource("1")
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.25, 0)
+scale = Vector3(20, 0.5, 15)
+mesh = SubResource("floor_mesh")
+
+[node name="Walls" type="Node3D" parent="."]
+
+[node name="Back" type="MeshInstance3D" parent="Walls"]
+position = Vector3(0, 2.5, -7.5)
+scale = Vector3(20, 5, 0.3)
+mesh = SubResource("wall_mesh")
+
+[node name="Left" type="MeshInstance3D" parent="Walls"]
+position = Vector3(-10, 2.5, 0)
+scale = Vector3(0.3, 5, 15)
+mesh = SubResource("wall_mesh")
+
+[node name="Right" type="MeshInstance3D" parent="Walls"]
+position = Vector3(10, 2.5, 0)
+scale = Vector3(0.3, 5, 15)
+mesh = SubResource("wall_mesh")
+
+[node name="FrontLeft" type="MeshInstance3D" parent="Walls"]
+position = Vector3(-5.5, 2.5, 7.5)
+scale = Vector3(9, 5, 0.3)
+mesh = SubResource("wall_mesh")
+
+[node name="FrontRight" type="MeshInstance3D" parent="Walls"]
+position = Vector3(5.5, 2.5, 7.5)
+scale = Vector3(9, 5, 0.3)
+mesh = SubResource("wall_mesh")
+
+[node name="Collisions" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Floor" type="CollisionShape3D" parent="Collisions"]
+position = Vector3(0, -0.25, 0)
+scale = Vector3(20, 0.5, 15)
+shape = SubResource("box_shape")
+
+[node name="Back" type="CollisionShape3D" parent="Collisions"]
+position = Vector3(0, 2.5, -7.5)
+scale = Vector3(20, 5, 0.3)
+shape = SubResource("box_shape")
+
+[node name="Left" type="CollisionShape3D" parent="Collisions"]
+position = Vector3(-10, 2.5, 0)
+scale = Vector3(0.3, 5, 15)
+shape = SubResource("box_shape")
+
+[node name="Right" type="CollisionShape3D" parent="Collisions"]
+position = Vector3(10, 2.5, 0)
+scale = Vector3(0.3, 5, 15)
+shape = SubResource("box_shape")
+
+[node name="FrontLeft" type="CollisionShape3D" parent="Collisions"]
+position = Vector3(-5.5, 2.5, 7.5)
+scale = Vector3(9, 5, 0.3)
+shape = SubResource("box_shape")
+
+[node name="FrontRight" type="CollisionShape3D" parent="Collisions"]
+position = Vector3(5.5, 2.5, 7.5)
+scale = Vector3(9, 5, 0.3)
+shape = SubResource("box_shape")
+
+[node name="Facilities" type="Node3D" parent="."]
+
+[node name="SquadBox" parent="Facilities" instance=ExtResource("3")]
+position = Vector3(-5, 0, -3)
+action_id = &"open_squad_screen"
+display_name = "Manage Squad"
+visual_color = Color(0.25, 0.58, 0.8, 1)
+visual_kind = 1
+
+[node name="AstralBoxBox" parent="Facilities" instance=ExtResource("3")]
+position = Vector3(0, 0, -3)
+action_id = &"astral_box"
+display_name = "Astral Box"
+visual_color = Color(0.5, 0.32, 0.82, 1)
+visual_kind = 1
+
+[node name="GiveAstralBox" parent="Facilities" instance=ExtResource("3")]
+position = Vector3(5, 0, -3)
+action_id = &"give_test_astral"
+display_name = "Give Test Astral"
+visual_color = Color(0.86, 0.65, 0.16, 1)
+visual_kind = 1
+
+[node name="ExitDoor" parent="." instance=ExtResource("2")]
+position = Vector3(0, 0, 7.34)
+door_id = &"test_hub_astrals_roster_exit"
+display_name = "Door to the Test Hub"
+destination_map_id = &"test_hub"
+destination_spawn_id = &"from_astrals_roster"
+
+[node name="AstralPickerScreen" parent="." instance=ExtResource("4")]
+title_text = "Give Test Astral"
+
+[node name="InfoToast" parent="." instance=ExtResource("5")]

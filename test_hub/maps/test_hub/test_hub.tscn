@@ -1,0 +1,184 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://test_hub/maps/test_hub/test_hub.gd" id="1"]
+[ext_resource type="PackedScene" path="res://test_hub/buildings/test_building_shell.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://game/ui/notifications/notification_toast.tscn" id="3"]
+
+[sub_resource type="StandardMaterial3D" id="sidewalk_mat"]
+albedo_color = Color(0.64, 0.62, 0.58, 1)
+roughness = 0.92
+
+[sub_resource type="BoxMesh" id="sidewalk_mesh"]
+material = SubResource("sidewalk_mat")
+size = Vector3(1, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="street_mat"]
+albedo_color = Color(0.16, 0.16, 0.18, 1)
+roughness = 0.85
+
+[sub_resource type="BoxMesh" id="street_mesh"]
+material = SubResource("street_mat")
+size = Vector3(1, 1, 1)
+
+[sub_resource type="BoxShape3D" id="ground_shape"]
+size = Vector3(1, 1, 1)
+
+[node name="TestHub" type="Node3D"]
+script = ExtResource("1")
+
+[node name="Ground" type="Node3D" parent="."]
+
+[node name="Sidewalk" type="MeshInstance3D" parent="Ground"]
+position = Vector3(0, -0.2, 0)
+scale = Vector3(26, 0.4, 180)
+mesh = SubResource("sidewalk_mesh")
+
+[node name="Street" type="MeshInstance3D" parent="Ground"]
+position = Vector3(0, -0.19, 0)
+scale = Vector3(6.4, 0.42, 180)
+mesh = SubResource("street_mesh")
+
+[node name="Collisions" type="StaticBody3D" parent="Ground"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="GroundShape" type="CollisionShape3D" parent="Ground/Collisions"]
+position = Vector3(0, -0.2, 0)
+scale = Vector3(26, 0.4, 180)
+shape = SubResource("ground_shape")
+
+[node name="InfoToast" parent="." instance=ExtResource("3")]
+
+[node name="Buildings" type="Node3D" parent="."]
+
+[node name="BuildingA" parent="Buildings" instance=ExtResource("2")]
+position = Vector3(-9, 0, -28)
+rotation = Vector3(0, 1.5707963, 0)
+building_id = &"battle"
+display_name = "Battle"
+feature_summary = "Choose your Astral, choose the enemy, start the battle, edit inventory mid-fight."
+status = 1
+interior_map_id = &"test_hub_battle"
+interior_spawn_id = &"default"
+
+[node name="BuildingB" parent="Buildings" instance=ExtResource("2")]
+position = Vector3(-9, 0, -14)
+rotation = Vector3(0, 1.5707963, 0)
+building_id = &"astrals_roster"
+display_name = "Astrals / Roster"
+feature_summary = "Manage roster, browse the catalog, test evolution and learnsets."
+status = 1
+interior_map_id = &"test_hub_astrals_roster"
+interior_spawn_id = &"default"
+
+[node name="BuildingC" parent="Buildings" instance=ExtResource("2")]
+position = Vector3(-9, 0, 0)
+rotation = Vector3(0, 1.5707963, 0)
+building_id = &"inventory"
+display_name = "Inventory"
+feature_summary = "Add/remove items, check capacity and stacking rules."
+status = 2
+
+[node name="BuildingD" parent="Buildings" instance=ExtResource("2")]
+position = Vector3(-9, 0, 14)
+rotation = Vector3(0, 1.5707963, 0)
+building_id = &"economy"
+display_name = "Economy / Shop"
+feature_summary = "Buy, sell, and gamble (coin flip) with test Florins."
+status = 2
+
+[node name="BuildingE" parent="Buildings" instance=ExtResource("2")]
+position = Vector3(-9, 0, 28)
+rotation = Vector3(0, 1.5707963, 0)
+building_id = &"save_load"
+display_name = "Save / Load"
+feature_summary = "Save and load game state, inspect and manage save slots."
+status = 2
+
+[node name="BuildingF" parent="Buildings" instance=ExtResource("2")]
+position = Vector3(9, 0, -28)
+rotation = Vector3(0, -1.5707963, 0)
+building_id = &"grimoire"
+display_name = "Grimoire"
+feature_summary = "Mark Astrals seen/captured, browse discovery entries."
+status = 2
+
+[node name="BuildingG" parent="Buildings" instance=ExtResource("2")]
+position = Vector3(9, 0, -14)
+rotation = Vector3(0, -1.5707963, 0)
+building_id = &"npcs_trainers"
+display_name = "NPCs / Trainers"
+feature_summary = "Trigger trainer battles and NPC dialogue/gifts."
+status = 2
+
+[node name="BuildingH" parent="Buildings" instance=ExtResource("2")]
+position = Vector3(9, 0, 0)
+rotation = Vector3(0, -1.5707963, 0)
+building_id = &"world_map"
+display_name = "World / Map Transitions"
+feature_summary = "Test map transitions, building doors, and portals."
+status = 2
+
+[node name="BuildingI" parent="Buildings" instance=ExtResource("2")]
+position = Vector3(9, 0, 14)
+rotation = Vector3(0, -1.5707963, 0)
+building_id = &"player_interaction"
+display_name = "Player / Interaction"
+feature_summary = "Test movement, camera, and the generic interact system."
+status = 2
+
+[node name="BuildingJ" parent="Buildings" instance=ExtResource("2")]
+position = Vector3(9, 0, 28)
+rotation = Vector3(0, -1.5707963, 0)
+building_id = &"session"
+display_name = "Session / Multiplayer"
+feature_summary = "Inspect runtime context, simulate session/authority swaps."
+status = 2
+
+[node name="BuildingK" parent="Buildings" instance=ExtResource("2")]
+position = Vector3(-9, 0, 42)
+rotation = Vector3(0, 1.5707963, 0)
+building_id = &"arena"
+display_name = "Arena"
+feature_summary = "Not implemented yet - planned arena-style battles."
+status = 3
+
+[node name="BuildingL" parent="Buildings" instance=ExtResource("2")]
+position = Vector3(9, 0, 42)
+rotation = Vector3(0, -1.5707963, 0)
+building_id = &"auction"
+display_name = "Auction (Asta)"
+feature_summary = "Not implemented yet - planned player auction house."
+status = 3
+
+[node name="BuildingM" parent="Buildings" instance=ExtResource("2")]
+position = Vector3(-9, 0, 56)
+rotation = Vector3(0, 1.5707963, 0)
+building_id = &"cards"
+display_name = "Cards (Carte)"
+feature_summary = "Not implemented yet - planned card-based system."
+status = 3
+
+[node name="BuildingN" parent="Buildings" instance=ExtResource("2")]
+position = Vector3(9, 0, 56)
+rotation = Vector3(0, -1.5707963, 0)
+building_id = &"raid"
+display_name = "Raid"
+feature_summary = "Not implemented yet - planned multiplayer raid encounters."
+status = 3
+
+[node name="BuildingO" parent="Buildings" instance=ExtResource("2")]
+position = Vector3(-9, 0, 70)
+rotation = Vector3(0, 1.5707963, 0)
+building_id = &"soul_binding"
+display_name = "Soul-Binding"
+feature_summary = "Not implemented yet - planned alternate capture/bonding mechanic."
+status = 3
+
+[node name="BuildingP" parent="Buildings" instance=ExtResource("2")]
+position = Vector3(9, 0, 70)
+rotation = Vector3(0, -1.5707963, 0)
+building_id = &"environmental_obstacles"
+display_name = "Environmental Obstacles"
+feature_summary = "Not implemented yet - planned environmental hazards/obstacles."
+status = 3

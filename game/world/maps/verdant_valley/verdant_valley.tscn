@@ -1,8 +1,10 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://game/world/maps/verdant_valley/verdant_valley.gd" id="1_map"]
 [ext_resource type="PackedScene" path="res://game/world/transitions/map_transition_portal.tscn" id="2_portal"]
 [ext_resource type="PackedScene" path="res://game/world/buildings/merchant_house_exterior.tscn" id="3_house"]
+; Test Hub only — see test_hub/EXTERNAL_TOUCHES.md
+[ext_resource type="PackedScene" path="res://test_hub/dev/dev_test_hub_portal.tscn" id="4_dev_portal"]
 
 [node name="VerdantValley" type="Node3D"]
 script = ExtResource("1_map")
@@ -32,3 +34,8 @@ destination_map_id = &"large_island"
 destination_spawn_id = &"from_verdant_forest"
 
 [node name="MerchantHouseExterior" parent="." instance=ExtResource("3_house")]
+
+; Test Hub only, temporary dev node - see test_hub/EXTERNAL_TOUCHES.md for how
+; to remove this cleanly (also delete the ext_resource above and the
+; dev_test_hub_portal wiring in verdant_valley.gd).
+[node name="DevTestHubPortal" parent="." instance=ExtResource("4_dev_portal")]

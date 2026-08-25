@@ -12,6 +12,16 @@ const MAP_SCENES: Dictionary[StringName, PackedScene] = {
 	&"merchant_house": preload(
 		"res://game/world/maps/merchant_house/merchant_house.tscn"
 	),
+	# Test Hub only (dev/QA map, not shipped content) — see test_hub/EXTERNAL_TOUCHES.md
+	&"test_hub": preload(
+		"res://test_hub/maps/test_hub/test_hub.tscn"
+	),
+	&"test_hub_battle": preload(
+		"res://test_hub/maps/battle/battle.tscn"
+	),
+	&"test_hub_astrals_roster": preload(
+		"res://test_hub/maps/astrals_roster/astrals_roster.tscn"
+	),
 }
 const BATTLE_PAUSE_LOCK: StringName = &"battle"
 const TRAINER_MOVEMENT_LOCK: StringName = &"trainer_challenge"
@@ -31,6 +41,12 @@ const DROPS_BY_CATEGORY: Dictionary[StringName, StringName] = {
 	&"mushroom": &"fungo",
 	&"shrub": &"bacca",
 }
+# Test Hub only — see test_hub/EXTERNAL_TOUCHES.md
+const TEST_ITEM_KIT: Array[StringName] = [
+	&"bacca", &"cocco", &"fungo", &"legno", &"pietra",
+	&"pietrafuoco", &"pietragelo", &"pietranatura", &"runa_base", &"stoffa",
+]
+const TEST_ITEM_KIT_AMOUNT: int = 3
 
 @onready var world_map: Node3D = $WorldMap
 @onready var runtime_context: RuntimeContext = $RuntimeContext
@@ -176,6 +192,15 @@ func _connect_world_map_signals() -> void:
 		&"facility_action_requested",
 		_on_facility_action_requested
 	)
+	# Test Hub only — see test_hub/EXTERNAL_TOUCHES.md
+	_connect_world_map_signal(
+		&"test_battle_start_requested",
+		_on_test_battle_start_requested
+	)
+	_connect_world_map_signal(
+		&"test_astral_gift_requested",
+		_on_test_astral_gift_requested
+	)
 
 
 func _connect_world_map_signal(
@@ -280,6 +305,51 @@ func _on_facility_action_requested(
 			game_ui.open_astral_box()
 		&"coin_flip":
 			game_ui.open_coin_flip()
+		# --- Test Hub only, from here to the end of this match — see test_hub/EXTERNAL_TOUCHES.md ---
+		&"open_squad_screen":
+			game_ui.squad_screen.open()
+		&"stock_test_inventory":
+			_grant_test_item_kit(session)
+
+
+# Test Hub only — see test_hub/EXTERNAL_TOUCHES.md
+func _grant_test_item_kit(session: PlayerSession) -> void:
+	if not can_execute_authoritative_action(session):
+		return
+	var total_added := 0
+	for item_id: StringName in TEST_ITEM_KIT:
+		total_added += session.inventory.add_item(item_id, TEST_ITEM_KIT_AMOUNT)
+	game_ui.show_notification(
+		"Test item kit added to your inventory."
+		if total_added > 0
+		else "Inventory full: no test items were added."
+	)
+
+
+# Test Hub only — see test_hub/EXTERNAL_TOUCHES.md
+func _on_test_astral_gift_requested(
+	definition: AstralDefinition,
+	level: int,
+	actor: CharacterBody3D
+) -> void:
+	var session := get_player_session_for_actor(actor)
+	if (
+		definition == null
+		or session == null
+		or not can_execute_authoritative_action(session)
+	):
+		return
+	var gifted := session.astral_roster.give_astral(
+		definition,
+		clampi(level, 1, AstralDefinition.MAX_LEVEL)
+	)
+	if gifted == null:
+		game_ui.show_notification("Could not add the test Astral: roster is full.")
+		return
+	session.grimoire.register_captured(definition)
+	game_ui.show_notification(
+		"Added test Astral: %s (Lv. %d)." % [definition.display_name, level]
+	)
 
 
 func _replace_world_map(
@@ -374,9 +444,61 @@ func _start_wild_battle(session: PlayerSession = null) -> void:
 		push_error("Nessun Astral selvatico configurato per l'incontro.")
 		_battle_transitioning = false
 		return
-	var battle_definitions := _get_battle_model_definitions(
+	await _run_battle(
 		wild_definition,
-		resolved_session.astral_roster
+		_get_wild_astral_level(resolved_session.astral_roster),
+		resolved_session
+	)
+
+
+# Test Hub only, from here through _start_test_battle() — see test_hub/EXTERNAL_TOUCHES.md
+func _on_test_battle_start_requested(
+	enemy_definition: AstralDefinition,
+	enemy_level: int,
+	actor: CharacterBody3D
+) -> void:
+	var session := get_player_session_for_actor(actor)
+	if (
+		enemy_definition == null
+		or session == null
+		or not can_execute_authoritative_action(session)
+		or _active_battle != null
+		or _battle_transitioning
+		or _map_transitioning
+		or _active_trainer != null
+		or _active_npc != null
+	):
+		return
+	_battle_transitioning = true
+	call_deferred(
+		"_start_test_battle",
+		enemy_definition,
+		clampi(enemy_level, 1, AstralDefinition.MAX_LEVEL),
+		session
+	)
+
+
+func _start_test_battle(
+	enemy_definition: AstralDefinition,
+	enemy_level: int,
+	session: PlayerSession
+) -> void:
+	if session == null or not session.is_ready_for_gameplay():
+		_battle_transitioning = false
+		return
+	await _run_battle(enemy_definition, enemy_level, session)
+
+
+# Shared by real wild battles (_start_wild_battle) and Test Hub battles
+# (_start_test_battle) — do NOT remove this even if Test Hub is removed.
+func _run_battle(
+	opponent_definition: AstralDefinition,
+	opponent_level: int,
+	session: PlayerSession
+) -> void:
+	var battle_definitions := _get_battle_model_definitions(
+		opponent_definition,
+		session.astral_roster
 	)
 	_request_astral_models(battle_definitions)
 	game_ui.set_pause_lock(BATTLE_PAUSE_LOCK, true)
@@ -392,14 +514,14 @@ func _start_wild_battle(session: PlayerSession = null) -> void:
 		return
 
 	_active_battle = battle
-	_active_battle_session = resolved_session
+	_active_battle_session = session
 	battle_host.add_child(battle)
 	battle.battle_finished.connect(_on_battle_finished)
-	resolved_session.grimoire.register_seen(wild_definition)
+	session.grimoire.register_seen(opponent_definition)
 	battle.setup_for_session(
-		resolved_session,
-		wild_definition,
-		_get_wild_astral_level(resolved_session.astral_roster),
+		session,
+		opponent_definition,
+		opponent_level,
 		_encounter_random
 	)
 	await game_ui.fade_from_black(battle_fade_duration)

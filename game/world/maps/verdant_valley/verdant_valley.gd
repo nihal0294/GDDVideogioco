@@ -209,6 +209,8 @@ const MEADOW_COLOR := Color("91c955")
 @onready var npcs_container: Node3D = $Npcs
 @onready var transition_portal: MapTransitionPortal = $TransitionPortal
 @onready var merchant_house: Node3D = $MerchantHouseExterior
+# Test Hub only — see test_hub/EXTERNAL_TOUCHES.md
+@onready var dev_test_hub_portal: DevTestHubPortal = $DevTestHubPortal
 
 var _height_noise := FastNoiseLite.new()
 var _detail_noise := FastNoiseLite.new()
@@ -233,6 +235,7 @@ func _ready() -> void:
 	_setup_world_npcs()
 	_setup_transition_portal()
 	_setup_merchant_house()
+	_setup_dev_test_hub_portal()  # Test Hub only — see test_hub/EXTERNAL_TOUCHES.md
 	generation_finished.emit()
 
 
@@ -302,8 +305,36 @@ func _setup_merchant_house() -> void:
 		)
 
 
+# Test Hub only, this function and _on_dev_test_hub_portal_requested() below
+# — see test_hub/EXTERNAL_TOUCHES.md for how to remove this cleanly.
+func _setup_dev_test_hub_portal() -> void:
+	var spawn := get_spawn_position()
+	var portal_x := spawn.x + 6.0
+	var portal_z := spawn.z
+	dev_test_hub_portal.position = Vector3(
+		portal_x,
+		get_terrain_height(portal_x, portal_z) + 0.04,
+		portal_z
+	)
+	if not dev_test_hub_portal.transition_requested.is_connected(
+		_on_dev_test_hub_portal_requested
+	):
+		dev_test_hub_portal.transition_requested.connect(
+			_on_dev_test_hub_portal_requested
+		)
+
+
 func _on_merchant_house_transition_requested(
 	_door: BuildingDoor,
+	destination_map_id: StringName,
+	destination_spawn_id: StringName,
+	actor: CharacterBody3D
+) -> void:
+	map_transition_requested.emit(destination_map_id, destination_spawn_id, actor)
+
+
+func _on_dev_test_hub_portal_requested(
+	_portal: DevTestHubPortal,
 	destination_map_id: StringName,
 	destination_spawn_id: StringName,
 	actor: CharacterBody3D

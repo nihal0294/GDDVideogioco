@@ -1,0 +1,37 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://test_hub/buildings/test_building_shell.gd" id="1"]
+[ext_resource type="PackedScene" path="res://game/world/buildings/building_door.tscn" id="2"]
+
+[sub_resource type="BoxMesh" id="shell_mesh"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="BoxShape3D" id="shell_shape"]
+size = Vector3(1, 1, 1)
+
+[node name="TestBuildingShell" type="Node3D"]
+script = ExtResource("1")
+
+[node name="Shell" type="MeshInstance3D" parent="."]
+position = Vector3(0, 2, 0)
+scale = Vector3(6, 4, 6)
+mesh = SubResource("shell_mesh")
+
+[node name="Collisions" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Shape" type="CollisionShape3D" parent="Collisions"]
+position = Vector3(0, 2, 0)
+scale = Vector3(6, 4, 6)
+shape = SubResource("shell_shape")
+
+[node name="NameSign" type="Label3D" parent="."]
+position = Vector3(0, 5.4, 3.2)
+billboard = 1
+font_size = 40
+outline_size = 9
+text = "Building"
+
+[node name="Door" parent="." instance=ExtResource("2")]
+position = Vector3(0, 0, 3.16)
